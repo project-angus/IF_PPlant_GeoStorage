@@ -15,7 +15,7 @@ from scipy import interpolate
 import logging
 from tespy.networks import load_network
 from tespy.tools import logger
-from tespy.connections import ref
+from tespy.connections import Ref
 from tespy.tools.helpers import TESPyNetworkError
 
 logger.define_logging(
@@ -110,7 +110,7 @@ class model:
             power_bus.set_attr(P=getattr(self, 'power_nominal_' + mode))
             pressure_conn.set_attr(
                 p=getattr(self, 'pressure_nominal_' + mode),
-                m=ref(massflow_conn, 1 / self.num_wells, 0)
+                m=Ref(massflow_conn, 1 / self.num_wells, 0)
             )
             massflow_conn.set_attr(m=np.nan)
             model.components[getattr(self, 'pipe_' + mode)].set_attr(
@@ -201,7 +201,6 @@ class model:
             return 0, 0, 0
 
         try:
-
             # for higher stability: allow a maximum stepwidth in pressure of
             # 10 bar
             num = int(abs(pressure - pressure_conn.p.val) // 10) + 1
