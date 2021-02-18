@@ -17,6 +17,7 @@ from tespy.networks import load_network
 from tespy.tools import logger
 from tespy.connections import Ref
 from tespy.tools.helpers import TESPyNetworkError
+from tespy.tools import document_model
 
 logger.define_logging(
     log_path=True, log_version=True, screen_level=logging.WARNING, file_level=logging.WARNING
@@ -113,10 +114,11 @@ class model:
                 m=Ref(massflow_conn, 1 / self.num_wells, 0)
             )
             massflow_conn.set_attr(m=np.nan)
-            model.components[getattr(self, 'pipe_' + mode)].set_attr(
+            model.get_comp(getattr(self, 'pipe_' + mode)).set_attr(
                 L=self.min_well_depth
             )
             model.solve('design')
+            document_model(model, path=self.wdir + '_report_design_' + mode)
             model.save(self.wdir + self.sc + '_' + mode + '_design')
             m_nom = massflow_conn.m.val_SI
             setattr(self, 'm_nom_' + mode, m_nom)
@@ -130,6 +132,8 @@ class model:
                 '.'
             )
             logging.debug(msg)
+            model.solve('offdesign', design_path=self.wdir + self.sc + '_' + mode + '_design')
+            document_model(model, path=self.wdir + '_report_offdesign_' + mode)
 
         msg = 'Finished power plant layout calculation.'
         logging.debug(msg)
@@ -186,12 +190,12 @@ class model:
         massflow_min = getattr(self, 'm_min_' + mode)
         massflow_max = getattr(self, 'm_max_' + mode)
 
-        pressure_conn = model.connections[
+        pressure_conn = model.get_conn(
             getattr(self, 'pressure_conn_' + mode)
-        ]
-        massflow_conn = model.connections[
+        )
+        massflow_conn = model.get_conn(
             getattr(self, 'massflow_conn_' + mode)
-        ]
+        )
         power_bus = model.busses[getattr(self, 'power_bus_' + mode)]
         heat_bus = model.busses[getattr(self, 'heat_bus_' + mode)]
 
@@ -321,12 +325,12 @@ class model:
         massflow_min = getattr(self, 'm_min_' + mode)
         massflow_max = getattr(self, 'm_max_' + mode)
 
-        pressure_conn = model.connections[
+        pressure_conn = model.get_conn(
             getattr(self, 'pressure_conn_' + mode)
-        ]
-        massflow_conn = model.connections[
+        )
+        massflow_conn = model.get_conn(
             getattr(self, 'massflow_conn_' + mode)
-        ]
+        )
         power_bus = model.busses[getattr(self, 'power_bus_' + mode)]
         heat_bus = model.busses[getattr(self, 'heat_bus_' + mode)]
 
