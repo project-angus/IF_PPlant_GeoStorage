@@ -104,8 +104,8 @@ class model:
         for mode in ['charge', 'discharge']:
 
             model = getattr(self, mode)
-            pressure_conn = model.connections[getattr(self, 'pressure_conn_' + mode)]
-            massflow_conn = model.connections[getattr(self, 'massflow_conn_' + mode)]
+            pressure_conn = model.get_conn(getattr(self, 'pressure_conn_' + mode))
+            massflow_conn = model.get_conn(getattr(self, 'massflow_conn_' + mode))
             power_bus = model.busses[getattr(self, 'power_bus_' + mode)]
 
             power_bus.set_attr(P=getattr(self, 'power_nominal_' + mode))

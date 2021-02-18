@@ -178,7 +178,17 @@ def __main__(argv):
 
     if cd.balance_mass_eos:
 
-        accumulated_mass = output_ts['massflow_actual'].cumsum()
+        charge = output_ts['power_actual'] > 0
+        discharge = output_ts['power_actual'] < 0
+
+        output_ts['massflow_out'] = -output_ts[discharge]['massflow_actual']
+        output_ts['massflow_in'] = output_ts[charge]['massflow_actual']
+
+        output_ts['massflow_out'].fillna(value=0, inplace=True)
+        output_ts['massflow_in'].fillna(value=0, inplace=True)
+        accumulated_mass = output_ts['massflow_in'] + output_ts['massflow_out']
+        accumulated_mass = accumulated_mass.sum()*3600
+
 
         if accumulated_mass > 0:
             mode = 'discharging'
@@ -191,7 +201,7 @@ def __main__(argv):
         else:
             time = 0
 
-        for t_step in range(cd.t_steps_total, cd.t_steps_total + time):
+        for t_step in range(cd.t_steps_total, int(cd.t_steps_total + time)):
             # calculate pressure, mass flow and power
             p_actual, m_target, m_actual, power_actual, heat, success, power_plant_off = calc_timestep_mass(
                 powerplant, geostorage, massflow_target, p0, cd, t_step, power_plant_off)
@@ -239,7 +249,6 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
     p1 = p0
 
     #initilizing variables
-    power_corr = power
     m = massflow
     heat = 0.0
     p_delta_limit = 0.0
