@@ -176,7 +176,7 @@ def __main__(argv):
         #save old power target
         power_target_t0 = power_target
 
-    if balance_mass_eos:
+    if cd.balance_mass_eos:
 
         accumulated_mass = output_ts['massflow_actual'].cumsum()
 
@@ -191,11 +191,28 @@ def __main__(argv):
         else:
             time = 0
 
-        for t_step in range(time):
+        for t_step in range(cd.t_steps_total, cd.t_steps_total + time):
             # calculate pressure, mass flow and power
             p_actual, m_target, m_actual, power_actual, heat, success, power_plant_off = calc_timestep_mass(
                 powerplant, geostorage, massflow_target, p0, cd, t_step, power_plant_off)
 
+            # save last pressure (p1) for next time step as p0
+            p0 = p_actual
+            #deleting old files
+            geostorage.deleteSimFiles(t_step)
+
+            # write pressure, mass flow and power to .csv
+            if cd.auto_eval_output == True:
+                delta_power = abs(power_actual) - abs(power_target)
+                delta_massflow = abs(m_actual) - abs(m_target)
+
+                output_ts.loc[t_step] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
+                                                        p_actual, success, delta_power, delta_massflow])
+            else:
+                output_ts.loc[t_step] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
+                                                        p_actual])
+
+            output_ts.to_csv(cd.working_dir + cd.output_timeseries_path, index=False, sep=';')
 
 def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
     """
