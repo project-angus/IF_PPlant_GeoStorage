@@ -96,6 +96,9 @@ def __main__(argv):
         variable_list = ['time', 'power_target', 'massflow_target', 'power_actual', 'heat', 'massflow_actual', 'storage_pressure' ]
     #one output line per timestep...
     output_ts = pd.DataFrame(index=np.arange(0, cd.t_steps_total),columns=variable_list)
+    current_time = cd.t_start - datetime.timedelta(seconds=cd.t_step_length)
+    output_ts.loc[0] = 0
+    output_ts.loc[0, "time"] = current_time
 
     #print(output_ts)
     '''debug values from here onwards'''
@@ -109,6 +112,7 @@ def __main__(argv):
     p0 = 0.0 #old pressure (from last time step / iter)
     # get initial pressure before the time loop
     p0, dummy_flow = geostorage.CallStorageSimulation(0.0, -1, 0, cd, 'init')
+    output_ts.loc[0,"storage_pressure"] = p0
     print('Simulation initialzation completed.')
     print('################################################################################################################')
 
@@ -121,8 +125,6 @@ def __main__(argv):
     for t_step in range(cd.t_steps_total):
 
         current_time = datetime.timedelta(seconds=t_step * cd.t_step_length) + cd.t_start
-
-
 
         try:
             power_target = input_ts.loc[current_time].power * 1e6
@@ -160,10 +162,10 @@ def __main__(argv):
             delta_power = abs(power_actual) - abs(power_target)
             delta_massflow = abs(m_actual) - abs(m_target)
 
-            output_ts.loc[t_step] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
+            output_ts.loc[t_step+1] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
                                                     p_actual, success, delta_power, delta_massflow])
         else:
-            output_ts.loc[t_step] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
+            output_ts.loc[t_step+1] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
                                                     p_actual])
 
         #Logger.flush()
@@ -178,18 +180,24 @@ def __main__(argv):
 
     if cd.balance_mass_eos:
 
+        print('Balancing storage.')
+        print('################################################################################################################')
+
         charge = output_ts['power_actual'] > 0
         discharge = output_ts['power_actual'] < 0
 
-        output_ts['massflow_out'] = -output_ts[discharge]['massflow_actual']
-        output_ts['massflow_in'] = output_ts[charge]['massflow_actual']
+        tmp = output_ts.copy()
 
-        output_ts['massflow_out'].fillna(value=0, inplace=True)
-        output_ts['massflow_in'].fillna(value=0, inplace=True)
-        accumulated_mass = output_ts['massflow_in'] + output_ts['massflow_out']
+        tmp['massflow_out'] = -output_ts[discharge]['massflow_actual']
+        tmp["massflow_in"] = output_ts[charge]['massflow_actual']
+
+        tmp['massflow_out'].fillna(value=0, inplace=True)
+        tmp["massflow_in"].fillna(value=0, inplace=True)
+
+        accumulated_mass = tmp['massflow_in'] + tmp['massflow_out']
         accumulated_mass = accumulated_mass.sum()*3600
 
-
+        print("accumulated mass: ", accumulated_mass)
         if accumulated_mass > 0:
             mode = 'discharging'
             time = (abs(accumulated_mass) / powerplant.m_nom_discharge) // 3600 + 1
@@ -200,9 +208,13 @@ def __main__(argv):
             massflow_target = powerplant.m_nom_charge
         else:
             time = 0
+            mode = 'shut-in'
+        print("Storage balancing mode " + mode)
 
+        t_start = current_time
         for t_step in range(cd.t_steps_total, int(cd.t_steps_total + time)):
             # calculate pressure, mass flow and power
+            current_time = datetime.timedelta(seconds=t_step * cd.t_step_length) + t_start
             p_actual, m_target, m_actual, power_actual, heat, success, power_plant_off = calc_timestep_mass(
                 powerplant, geostorage, massflow_target, p0, cd, t_step, power_plant_off)
 
@@ -216,10 +228,10 @@ def __main__(argv):
                 delta_power = abs(power_actual) - abs(power_target)
                 delta_massflow = abs(m_actual) - abs(m_target)
 
-                output_ts.loc[t_step] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
+                output_ts.loc[t_step+1] = np.array([current_time, power_actual, m_target, power_actual, heat, m_actual,
                                                         p_actual, success, delta_power, delta_massflow])
             else:
-                output_ts.loc[t_step] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
+                output_ts.loc[t_step+1] = np.array([current_time, power_actual, m_target, power_actual, heat, m_actual,
                                                         p_actual])
 
             output_ts.to_csv(cd.working_dir + cd.output_timeseries_path, index=False, sep=';')
