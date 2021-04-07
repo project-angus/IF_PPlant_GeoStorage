@@ -84,12 +84,12 @@ class model:
     def load_tespy_model(self):
 
         # load tespy models with the network_reader module
-        self.charge = load_network(self.wdir + self.tespy_charge_path)
-        self.charge.set_attr(iterinfo=False)
-        self.charge.solve('design', init_only=True)
-        self.discharge = load_network(self.wdir + self.tespy_discharge_path)
-        self.discharge.set_attr(iterinfo=False)
-        self.discharge.solve('design', init_only=True)
+        self.charge_model = load_network(self.wdir + self.charge['path'])
+        self.charge_model.set_attr(iterinfo=False)
+        self.charge_model.solve('design', init_only=True)
+        self.discharge_model = load_network(self.wdir + self.discharge['path'])
+        self.discharge_model.set_attr(iterinfo=False)
+        self.discharge_model.solve('design', init_only=True)
 
         self.power_plant_layout()
 
@@ -103,18 +103,19 @@ class model:
 
         for mode in ['charge', 'discharge']:
 
-            model = getattr(self, mode)
-            pressure_conn = model.get_conn(getattr(self, 'pressure_conn_' + mode))
-            massflow_conn = model.get_conn(getattr(self, 'massflow_conn_' + mode))
-            power_bus = model.busses[getattr(self, 'power_bus_' + mode)]
+            model = getattr(self, mode + '_model')
+            model_data = getattr(self, mode)
+            pressure_conn = model.get_conn(model_data['pressure_conn'])
+            massflow_conn = model.get_conn(model_data['massflow_conn'])
+            power_bus = model.busses[model_data['power_bus']]
 
-            power_bus.set_attr(P=getattr(self, 'power_nominal_' + mode))
+            power_bus.set_attr(P=model_data['power_nominal'])
             pressure_conn.set_attr(
-                p=getattr(self, 'pressure_nominal_' + mode),
+                p=model_data['pressure_nominal'],
                 m=Ref(massflow_conn, 1 / self.num_wells, 0)
             )
             massflow_conn.set_attr(m=np.nan)
-            model.get_comp(getattr(self, 'pipe_' + mode)).set_attr(
+            model.get_comp(self.storage['well_label']).set_attr(
                 L=self.min_well_depth
             )
             model.solve('design')
@@ -122,13 +123,15 @@ class model:
             model.save(self.wdir + self.sc + '_' + mode + '_design')
             m_nom = massflow_conn.m.val_SI
             setattr(self, 'm_nom_' + mode, m_nom)
-            setattr(self, 'm_min_' + mode, m_nom * self.massflow_min_rel)
-            setattr(self, 'm_max_' + mode, m_nom * self.massflow_max_rel)
+            setattr(self, 'm_min_' + mode, m_nom * model_data['massflow_min_rel'])
+            setattr(self, 'm_max_' + mode, m_nom * model_data['massflow_max_rel'])
+
+            print(getattr(self, 'm_min_' + mode))
             msg = (
                 'Nominal mass flow for ' + mode + ' is ' +
                 str(m_nom) + ' at nominal power ' +
-                str(getattr(self, 'power_nominal_' + mode)) + ' and nominal ' +
-                'pressure ' + str(getattr(self, 'pressure_nominal_' + mode)) +
+                str(model_data['power_nominal']) + ' and nominal ' +
+                'pressure ' + str(model_data['pressure_nominal']) +
                 '.'
             )
             logging.debug(msg)
@@ -183,21 +186,19 @@ class model:
 
         remeber_mode = mode
         mode = self.mode_lookup[mode]
-        model = getattr(self, mode)
-        power_nominal = getattr(self, 'power_nominal_' + mode)
-        pressure_nominal = getattr(self, 'pressure_nominal_' + mode)
+        model = getattr(self, mode + '_model')
+        model_data = getattr(self, mode)
+
+        power_nominal = model_data['power_nominal']
+        pressure_nominal = model_data['pressure_nominal']
         massflow_nominal = getattr(self, 'm_nom_' + mode)
         massflow_min = getattr(self, 'm_min_' + mode)
         massflow_max = getattr(self, 'm_max_' + mode)
 
-        pressure_conn = model.get_conn(
-            getattr(self, 'pressure_conn_' + mode)
-        )
-        massflow_conn = model.get_conn(
-            getattr(self, 'massflow_conn_' + mode)
-        )
-        power_bus = model.busses[getattr(self, 'power_bus_' + mode)]
-        heat_bus = model.busses[getattr(self, 'heat_bus_' + mode)]
+        pressure_conn = model.get_conn(model_data['pressure_conn'])
+        massflow_conn = model.get_conn(model_data['massflow_conn'])
+        power_bus = model.busses[model_data['power_bus']]
+        heat_bus = model.busses[model_data['heat_bus']]
 
         design_path = self.wdir + self.sc + '_' + mode + '_design'
 
@@ -318,21 +319,19 @@ class model:
 
         remeber_mode = mode
         mode = self.mode_lookup[mode]
-        model = getattr(self, mode)
-        power_nominal = getattr(self, 'power_nominal_' + mode)
-        pressure_nominal = getattr(self, 'pressure_nominal_' + mode)
+        model = getattr(self, mode + '_model')
+        model_data = getattr(self, mode)
+
+        power_nominal = model_data['power_nominal']
+        pressure_nominal = model_data['pressure_nominal']
         massflow_nominal = getattr(self, 'm_nom_' + mode)
         massflow_min = getattr(self, 'm_min_' + mode)
         massflow_max = getattr(self, 'm_max_' + mode)
 
-        pressure_conn = model.get_conn(
-            getattr(self, 'pressure_conn_' + mode)
-        )
-        massflow_conn = model.get_conn(
-            getattr(self, 'massflow_conn_' + mode)
-        )
-        power_bus = model.busses[getattr(self, 'power_bus_' + mode)]
-        heat_bus = model.busses[getattr(self, 'heat_bus_' + mode)]
+        pressure_conn = model.get_conn(model_data['pressure_conn'])
+        massflow_conn = model.get_conn(model_data['massflow_conn'])
+        power_bus = model.busses[model_data['power_bus']]
+        heat_bus = model.busses[model_data['heat_bus']]
 
         design_path = self.wdir + self.sc + '_' + mode + '_design'
 
