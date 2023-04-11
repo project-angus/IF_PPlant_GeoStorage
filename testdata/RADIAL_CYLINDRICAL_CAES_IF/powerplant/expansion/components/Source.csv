@@ -1,0 +1,4 @@
+label;comp_type;busses;bus_param;bus_P_ref;bus_char;bus_base;design;offdesign;design_path;local_design;local_offdesign
+cas;Source;[];[];[];[];[];[];[];nan;False;False
+fuel source;Source;[];[];[];[];[];[];[];nan;False;False
+powerplant input source;Source;[];[];[];[];[];[];[];nan;False;False

@@ -1,0 +1,4 @@
+label;P;P_set
+power output;-50000000.0;True
+heat bus;0.0;False
+heat input;58762217.00173797;False

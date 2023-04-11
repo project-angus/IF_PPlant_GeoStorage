@@ -1,0 +1,64 @@
+{
+	"general": {
+		"grid_num": 8,
+		"ambient temperature": 20,
+		"ambient pressure": 1.01325,
+		"gasconstant": 287.15
+	},
+	"storage": {
+		"well_label": "pipe",
+		"well_num": 9,
+		"well_depth": 720,
+		"well_diameter": 0.25,
+		"bh_pressure_loss_char_compression": {
+			"x": [0, 8.889, 26.667, 35.556, 44.444, 53.333, 62.222, 71.111],
+			"y": [0, 1.49417, 4.51392, 6.0073, 7.48338, 8.94233, 10.38356, 11.80667]
+		},
+		"bh_pressure_loss_char_expansion": {
+			"x": [0, 8.889, 17.778, 26.667, 35.556, 44.444, 53.333, 62.222, 71.111],
+			"y": [0, 1.2147, 2.4458, 3.6918, 4.9538, 6.2328, 7.5307, 8.8493, 10.1903]
+		},
+		"pressure_min": 40,
+		"pressure_max": 90,
+		"temperature": 29.15,
+		"initial_pressure": 72,
+		"rel_pressure_loss_per_step": 0,
+		"delta mass": 829.440e6,
+		"delta pressure": 12.2
+	},
+	"charge": {
+		"massflow_min_rel": 0.25,
+		"massflow_max_rel": 1.05,
+		"_comment1": "coupled model uses relative mass flow values as boundaries",
+		"power_min_rel": 0.5,
+		"power_max_rel": 1,
+		"_comment2": "dispatch model builds on relative power values as boundaries",
+		"path": "compression",
+		"power_nominal": 50e6,
+		"pressure_nominal": 75,
+		"power_bus": "power input",
+		"heat_bus": "heat output",
+		"massflow_conn": "IF_massflow",
+		"pressure_conn": "IF_pressure",
+		"test_operational_range": false
+	},
+	"discharge": {
+		"massflow_min_rel": 0.5,
+		"massflow_max_rel": 1.05,
+		"_comment1": "coupled model uses relative mass flow values as boundaries",
+		"power_min_rel": 0.5,
+		"power_max_rel": 1,
+		"_comment2": "dispatch model builds on relative power values as boundaries",
+		"path": "expansion",
+		"power_nominal": -50e6,
+		"pressure_nominal": 65,
+		"power_bus": "power output",
+		"heat_bus": "heat input",
+		"massflow_conn": "IF_massflow",
+		"pressure_conn": "IF_pressure",
+		"test_operational_range": false
+	},
+	"dispatch_model": {
+		"create_input_data": true
+	}
+}
