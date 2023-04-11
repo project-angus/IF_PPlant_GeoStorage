@@ -339,6 +339,11 @@ class geo_sto:
             self.working_dir_loc + self.old_simulation_title + ".FSMSPEC",
             self.working_dir_loc + self.old_simulation_title + ".UNSMRY",
             self.working_dir_loc + self.old_simulation_title + ".FUNSMRY",
+            self.working_dir_loc + self.old_simulation_title + ".PRTX",
+            self.working_dir_loc + self.old_simulation_title + ".RTEMSG",
+            self.working_dir_loc + self.old_simulation_title + ".default",
+            self.working_dir_loc + self.old_simulation_title + ".session",
+            self.working_dir_loc + self.old_simulation_title + ".sessionlock",
         ]
         for entry in termination_list:
             #print('Deleting: ', entry)
