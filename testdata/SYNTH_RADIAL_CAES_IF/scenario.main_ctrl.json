@@ -1,0 +1,19 @@
+{
+	"input_timeseries_path": ".\\scenario_input.csv",
+	"output_timeseries_path": ".\\scenario_output.csv",
+	"geostorage_path": "geostorage\\",
+	"powerplant_path": "powerplant\\",
+	"t_start": "2030-01-01 00:00:00",
+	"t_steps_total": 200,
+	"t_step_length": 3600,
+	"min_iter": 0,
+	"max_iter": 10,
+	"save_nth_t_step": 1, 
+	"pressure_diff_rel": 0.01,
+	"pressure_diff_abs": 0.01,
+	"flow_diff_rel": 0.01,
+	"flow_diff_abs": 0.01,
+	"debug": "True",
+	"pressure_change_restart": 6.0,
+	"eval_output": "True"
+}
