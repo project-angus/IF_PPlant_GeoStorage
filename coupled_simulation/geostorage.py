@@ -602,24 +602,23 @@ class geo_sto:
         '''
         # open and read eclipse data file
 
-        schedule_path = self.working_dir_loc + self.simulation_title_orig + '.schedule'
+        schedule_path = f'{self.working_dir_loc}{self.simulation_title_orig}.schedule'
         schedule_file = util.getFile(schedule_path)
         flowrate_pos = util.searchSection(schedule_file, ' $CURVE') + 1
 
         if timestep == 0:
-            return  # exit function without modifying any files
+            return
 
         # update reservoir pressure
         if  timestep >= 1 and iter_step == 0: #maybe iter_step == 0 is enough
 
-            resprop_path = self.working_dir_loc + self.simulation_title_orig + '.res_prop'
+            resprop_path = f'{self.working_dir_loc}{self.simulation_title_orig}.res_prop'
             resprop_file = util.getFile(resprop_path)
             pressure_pos = util.searchSection(resprop_file, ' $INITIAL_PRESSURE') + 1
 
-            result_temp_path = self.working_dir_loc + self.old_simulation_title + '.RESULT_WELLS' #!!! use current simulation to get previus flow rate and mass volume
+            # retrieve the previous flow rate and mass volume using the results from the current simulation
+            result_temp_path = f'{self.working_dir_loc}{self.old_simulation_title}.RESULT_WELLS'
 
-            # todo :replace dataframe to list
-            #result = pd.read_csv(result_temp_path, header=[0, 1], sep='\t')
             results = util.getFile(result_temp_path)
             
             if len(results) <= 1:
@@ -630,7 +629,7 @@ class geo_sto:
             header = results[0].strip().split('\t')
 
             # find indices of relevant keyword
-            pressure_idx = [i for i, h in enumerate(header) if 'RES_PRESS' in h]
+            pressure_idx = util.getStringPositions(header, 'RES_PRESS')
 
             # get data from second line (first line shows variable unit)
             data = [line.strip().split('\t') for line in results[2:]]
@@ -672,8 +671,8 @@ class geo_sto:
         header = results[0].strip().split('\t')
   
         # find indices of relevant columns
-        bhp_idx = [i for i, h in enumerate(header) if 'BHP' in h]
-        mfr_idx = [i for i, h in enumerate(header) if 'MFR' in h]
+        bhp_idx = util.getStringPositions(header, 'BHP')
+        mfr_idx = util.getStringPositions(header, 'MFR')
   
         # extract rate and pressure data from second line (first is unit row)
         data = [line.strip().split('\t') for line in results[2:]]
