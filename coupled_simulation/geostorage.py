@@ -3,7 +3,7 @@
 
 """
 
-__author__ = "wtp"
+__author__ = "wtp, fgasa"
 
 """
 
@@ -65,9 +65,8 @@ class geo_sto:
 
         if(self.simulator == 'ECLIPSE' or self.simulator == 'e300'):
             flowrate, pressure = self.RunECLIPSE(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
-        elif self.simulator == 'proxy':
-            pass
-            #implement later (that is you firdovsi...)
+        elif self.simulator == 'PROXY':
+            flowrate, pressure = self.run_proxy(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
         else:
             print('ERROR: simulator flag not understood. Is: ', self.simulator)
 
@@ -519,6 +518,192 @@ class geo_sto:
 
         return [0.0, 0.0]
 
+    def run_proxy(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
+        """
+        function acting as a wrapper for using PROXY simulator as a storage simulator
 
+        :param target_flow_rate: target storage flow rate in sm3/d
+        :param tstep: current timestep
+        :param iter_step: current iteration step
+        :param tstepsize: length of current timestep
+        :param current_mode: current operational mode, either 'charging', 'discharging' or 'shut-in'
+        :returns: tuple of new pressure at the well (in reservoir) and actual (achieved) storage flow rate
+        """
 
+        if tstep < 0 or current_mode == 'init':
+            self.current_simulation_title = self.simulation_title_orig
 
+        if tstep >= 0:
+            self.old_simulation_title = self.current_simulation_title
+            self.current_simulation_title = f"{self.simulation_title_orig}_TSTEP_{tstep}_{iter_step}"
+
+        if not current_mode == 'init':
+            print('Running storage simulation')
+            print('Dir: ', os.sep.join(os.path.normpath(self.working_dir_loc).split(os.sep)[-3:]))
+            print('SimTitle: ', self.current_simulation_title)
+            print('Timestep/iteration:\t\t', '%.0f' % tstep, '/', '%.0f' % iter_step)
+            print('Timestep size:\t\t\t', tstepsize, 's')
+            print('Target storage flowrate:', '%.6f' % target_flowrate, '\tkg/s')
+            print('\t\t\t\t\t\t', '%.6f' % (target_flowrate / self.surface_density), '\tsm3/s')
+            print('Operational mode:\t\t', current_mode)
+        else:
+            print('Running storage simulation to obtain initial pressure')
+        
+        # change unit of flowrates to kg/s from kg/d
+        target_flowrate = target_flowrate / self.surface_density * 60.0 * 60.0 * 24.0
+
+        self.rework_proxy_data(tstep, iter_step, target_flowrate, current_mode)
+        
+        self.execute_proxy()
+
+        proxy_results = self.get_proxy_results(current_mode)
+    
+        self.rework_proxy_results(tstep, iter_step)
+
+        if not current_mode == 'init':
+            print('----------------------------------------------------------------------------------------------------------------')      
+            print('Pressure actual:\t\t', '%.6f' % proxy_results[0], '\tbars')
+            print('Flowrate actual:\t\t', '%.6f' % proxy_results[1], '\tkg/s')
+            print('\t\t\t\t\t\t', '%.6f' % (proxy_results[1] / self.surface_density), '\tsm3/s')
+        else:
+            print('Initial pressure is: \t', '%.6f' % proxy_results[0], 'bars')
+        print('----------------------------------------------------------------------------------------------------------------')
+
+        return proxy_results[1], proxy_results[0]
+    
+    def execute_proxy(self):
+        '''
+        function to call PROXY simulator executable
+
+        :returns: no return value
+        '''
+
+        if os.name == 'nt':
+            # simulation_path = ''
+            simulation_path = self.working_dir_loc + self.simulation_title_orig #proxy simulator uses only one unique name
+
+            if self.keep_ecl_logs == True:
+                log_file_path = f'{self.working_dir_loc}{self.current_simulation_title}.log'
+    
+            else:
+                log_file_path = 'NUL'
+            temp = f'{self.simulator_path}\\sAGSS.exe {simulation_path} > {log_file_path}'
+
+            os.system(temp)
+
+    def rework_proxy_data(self, timestep, iter_step, flowrate, op_mode):
+        '''
+        function to change settings in the PROXY input file required for the storage simulation
+
+        :param timestep: current timestep of simulation, type: int
+        :param flowrate: current target storage flow rate from power plant simulation, type: float
+        :param op_mode: current operational mode, either 'charging', 'discharging' or 'shut-in', type: str
+        :returns: no return value
+        '''
+        # open and read eclipse data file
+
+        schedule_path = self.working_dir_loc + self.simulation_title_orig + '.schedule'
+        schedule_file = util.getFile(schedule_path)
+        flowrate_pos = util.searchSection(schedule_file, ' $CURVE') + 1
+
+        if timestep == 0:
+            return  # exit function without modifying any files
+
+        # update reservoir pressure
+        if  timestep >= 1 and iter_step == 0: #maybe iter_step == 0 is enough
+
+            resprop_path = self.working_dir_loc + self.simulation_title_orig + '.res_prop'
+            resprop_file = util.getFile(resprop_path)
+            pressure_pos = util.searchSection(resprop_file, ' $INITIAL_PRESSURE') + 1
+
+            result_temp_path = self.working_dir_loc + self.old_simulation_title + '.RESULT_WELLS' #!!! use current simulation to get previus flow rate and mass volume
+
+            # todo :replace dataframe to list
+            #result = pd.read_csv(result_temp_path, header=[0, 1], sep='\t')
+            results = util.getFile(result_temp_path)
+            
+            if len(results) <= 1:
+                print('Warning: there is no simulation result')
+                return [None, None]
+
+            # extract header information
+            header = results[0].strip().split('\t')
+
+            # find indices of relevant keyword
+            pressure_idx = [i for i, h in enumerate(header) if 'RES_PRESS' in h]
+
+            # get data from second line (first line shows variable unit)
+            data = [line.strip().split('\t') for line in results[2:]]
+            pressure_res = [float(data[0][i]) for i in pressure_idx]
+            
+            # update pressure reservoir pressure in INITIAL PRESSURE keyword
+            resprop_file[pressure_pos] = f' {round(pressure_res[0], 3)}\n'
+
+            util.writeFile(resprop_path, resprop_file)
+
+        if op_mode == 'charging':
+           schedule_file[flowrate_pos] = f' 0 {round(flowrate, 3)}\n'
+
+        elif op_mode == 'discharging':
+           schedule_file[flowrate_pos] = f' 0 {round(-flowrate, 3)}\n'
+
+        elif op_mode == 'shut-in' or op_mode == 'init':
+           schedule_file[flowrate_pos] = ' 0 0\n'
+
+        # update flow rate in the CURVE keyword
+        util.writeFile(schedule_path, schedule_file)
+
+    def get_proxy_results(self, current_op_mode):
+        '''
+        function to get the PROXY results from the *.RESULTS_WELLS file and derive the pressure and actual flow rate data
+
+        :param timestep: current timestep, type: int
+        :param current_op_mode: operational mode, either 'charging', 'discharging' or 'shut-in', type: str
+        :returns: returns a tuple of float values containing pressure and actual storage flow rate
+        '''
+        file_path = f'{self.working_dir_loc}{self.simulation_title_orig}.RESULT_WELLS'
+        results = util.getFile(file_path)
+
+        if len(results) <= 1:
+            print('Warning: there is no simulation result')
+            return [None, None]
+
+        # extract header information
+        header = results[0].strip().split('\t')
+  
+        # find indices of relevant columns
+        bhp_idx = [i for i, h in enumerate(header) if 'BHP' in h]
+        mfr_idx = [i for i, h in enumerate(header) if 'MFR' in h]
+  
+        # extract rate and pressure data from second line (first is unit row)
+        data = [line.strip().split('\t') for line in results[2:]]
+
+        bhp_data = [float(data[0][i]) for i in bhp_idx]
+        mfr_data = [float(data[0][i]) for i in mfr_idx]
+
+        # storage pressure based on each WBHP
+        pressure_actual = sum(bhp_data) / len(bhp_data)
+        flowrate_actual = sum(mfr_data) / 60.0 / 60.0 / 24.0
+
+        if current_op_mode == 'discharging':
+            flowrate_actual = -flowrate_actual
+        elif current_op_mode == 'init':
+            flowrate_actual = flowrate_actual / 60.0 / 60.0 / 24.0
+
+        return [pressure_actual, flowrate_actual]
+    
+    def rework_proxy_results(self, timestep, iter_step):
+        """
+        function to rework the PROXY results file name to include the current time step and iteration step and rename the current results file
+        
+        :param timestep: the current time step, type: int
+        :param iter_step: the current iteration step, type: int
+        """
+        # define the new file name
+        if timestep < 0:
+            new_filename = f'{self.working_dir_loc}{self.simulation_title_orig}_TSTEP_{timestep}_{iter_step}.RESULT_WELLS'
+        else:
+            new_filename = f'{self.working_dir_loc}{self.current_simulation_title}.RESULT_WELLS'
+
+        # rename the current results file
+        os.rename(f'{self.working_dir_loc}{self.simulation_title_orig}.RESULT_WELLS', new_filename)
