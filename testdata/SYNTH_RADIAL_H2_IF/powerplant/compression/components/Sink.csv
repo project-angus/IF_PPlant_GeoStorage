@@ -1,0 +1,5 @@
+label;comp_type;busses;bus_param;bus_P_ref;bus_char;bus_base;design;offdesign;design_path;local_design;local_offdesign
+oxygen;Sink;[];[];[];[];[];[];[];nan;False;False
+power plant outlet sink;Sink;[];[];[];[];[];[];[];nan;False;False
+storage;Sink;[];[];[];[];[];[];[];nan;False;False
+cooling water outlet;Sink;[];[];[];[];[];[];[];nan;False;False

@@ -1,0 +1,2 @@
+label;comp_type;busses;bus_param;bus_P_ref;bus_char;bus_base;design;offdesign;design_path;local_design;local_offdesign;lamb;lamb_set;lamb_var;ti;ti_set;ti_var
+combustion;CombustionChamber;['thermal input'];[None];[206988313.8979295];['0x000001F098085BB0'];['component'];[];[];nan;False;False;3.532447767613576;False;False;206988313.8979295;False;False
