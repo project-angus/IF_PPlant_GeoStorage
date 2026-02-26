@@ -51,7 +51,7 @@ def __main__(argv):
         elif opt in ("-i", "--ipath"):
             path = arg
 
-    print(path)
+    start_time = datetime.datetime.now()
 
     if path[0] == "r":
         path = path[1:]
@@ -67,7 +67,7 @@ def __main__(argv):
     print('Input file is:')
     print(path)
 
-    print('################################################################################################################')
+    print("=" * 111)
     print('Assembling model data...')
 
     cd = coupling_data(path=path)
@@ -81,13 +81,13 @@ def __main__(argv):
     powerplant = pp.model(cd, min_well_depth, len(geostorage.well_names), max(geostorage.well_upper_BHP), min(geostorage.well_lower_BHP))
     #powerplant = pp.model(cd, min_well_depth, 9, 80, 40)
 
-    print('################################################################################################################')
+    print("=" * 111)
     print('Reading input time series...')
 
     input_ts = read_series(cd.working_dir + cd.input_timeseries_path)
 
     #prepare data structures
-    print('################################################################################################################')
+    print("=" * 111)
     print('Preparing output data structures...')
     variable_list = []
     if cd.auto_eval_output == True:
@@ -108,13 +108,12 @@ def __main__(argv):
     #data = geostorage.CallStorageSimulation(-1.15741, 3, cd, 'discharging')
     '''end of debug values'''
 
-    print('################################################################################################################')
     p0 = 0.0 #old pressure (from last time step / iter)
     # get initial pressure before the time loop
     p0, dummy_flow = geostorage.CallStorageSimulation(0.0, -1, 0, cd, 'init')
     output_ts.loc[0,"storage_pressure"] = p0
     print('Simulation initialzation completed.')
-    print('################################################################################################################')
+    print("=" * 111)
 
     # to shut of power plant until pressure is acceptable again
     power_plant_off = False
@@ -132,12 +131,10 @@ def __main__(argv):
         except KeyError:
             power_target = input_ts.loc[last_time].power * 1e6
 
-        print('################################################################################################################')
-        print('################################################################################################################')
-        print('################################################################################################################')
+        print("=" * 111)
 
-        print('Advancing to timestep:\t', t_step)
-        print('Target power output for this time step is: ','%.3f'%power_target)
+        print(f"{'Advancing to timestep:':30s} {t_step}")
+        print(f"{'Target power output for this time step is:':30s} {'%.3f' % power_target}")
         sys.stdout.flush()
 
         if power_plant_off == True:
@@ -178,10 +175,24 @@ def __main__(argv):
         #save old power target
         power_target_t0 = power_target
 
+    end_time = datetime.datetime.now()
+    elapsed = end_time - start_time  # this is a timedelta object
+    print("=" * 111)
+    print("End of coupled simulation")
+    print(f"{'Scenario name:':30s} {cd.scenario}")
+    print(f"{'Directory:':30s} {cd.working_dir}")
+    print(f"{'Log file:':30s} {path_log}")
+    # print(f"{'Start time:':30s} {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    # print(f"{'End time:':30s} {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'Elapsed time:':30s} {str(elapsed)}")
+    print("=" * 111)
+    print("\n" * 3)
+
+
     if cd.balance_mass_eos:
 
         print('Balancing storage.')
-        print('################################################################################################################')
+        print("=" * 111)
 
         charge = output_ts['power_actual'] > 0
         discharge = output_ts['power_actual'] < 0
@@ -292,10 +303,9 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
         if tstep_accepted:
             print('Message: Timestep accepted after iteration ', iter_step - 1)
             break
-        print('----------------------------------------------------------------------------------------------------------------')
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 50)
         print('Current iteration:\t', iter_step)
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 50)
         sys.stdout.flush()
 
         if pp_off == True:
@@ -313,7 +323,7 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
         if m == 0.0:    #matching float values, potentionally dangerous
             storage_mode = 'shut-in'
             power_corr = 0.0
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 50)
 
         #get pressure for the given target rate and the actually achieved flow rate from storage simulation
         p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode)
@@ -412,8 +422,8 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
         p0_temp = p1
 
     if not tstep_accepted:
-        print('----------------------------------------------------------------------------------------------------------------')
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 111)
+        print("-" * 111)
         print('Problem: Results in timestep ', tstep, 'did not converge, accepting last iteration result.')
     sys.stdout.flush()
     return p1, m, m_corr, power_corr, heat, tstep_accepted, pp_off
@@ -478,10 +488,9 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
         if tstep_accepted:
             print('Message: Timestep accepted after iteration ', iter_step - 1)
             break
-        print('----------------------------------------------------------------------------------------------------------------')
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 50)
         print('Current iteration:\t', iter_step)
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 50)
         sys.stdout.flush()
 
         if pp_off == True:
@@ -499,7 +508,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
         if m == 0.0:    #matching float values, potentionally dangerous
             storage_mode = 'shut-in'
             power_corr = 0.0
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 50)
 
         #get pressure for the given target rate and the actually achieved flow rate from storage simulation
         p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode )
