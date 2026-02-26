@@ -102,14 +102,13 @@ class geo_sto:
                 os.rename(self.working_dir_loc + self.old_simulation_title + '.DATA', self.working_dir_loc + self.current_simulation_title + '.DATA')
 
         if not current_mode == 'init':
-            print('Running storage simulation')
-            print('Dir: ', self.working_dir_loc)
-            print('SimTitle: ', self.current_simulation_title + '.DATA')
-            print('Timestep/iteration:\t\t', '%.0f'%tstep, '/', '%.0f'%iter_step)
-            print('Timestep size:\t\t\t', tstepsize, '\t\ts')
-            print('Target storage flowrate:\t', '%.6f'%target_flowrate, '\tkg/s')
-            print('\t\t\t\t', '%.6f'%(target_flowrate / self.surface_density), '\tsm3/s')
-            print('Operational mode:\t\t', current_mode)
+            print(f"{'Running storage simulation'}")
+            print(f"{'Simulation title:':30s} {self.current_simulation_title}")
+            print(f"{'Timestep / iteration:':30s} {int(tstep)} / {int(iter_step)}")
+            print(f"{'Timestep size [s]:':30s} {tstepsize:.0f}")
+            print(f"{'Target flowrate [kg/s]:':30s} {target_flowrate:.6f}")  # storage flow rate
+            print(f"{'Target flowrate [sm3/s]:':30s} {(target_flowrate / self.surface_density):.6f}")
+            print(f"{'Operational mode:':30s} {current_mode}")
 
         else:
             print('Running storage simulation to obtain initial pressure')
@@ -128,13 +127,13 @@ class geo_sto:
         ecl_results[1] = ecl_results[1] * self.surface_density
 
         if not current_mode == 'init':
-            print('----------------------------------------------------------------------------------------------------------------')
-            print('Pressure actual:\t\t', '%.6f'%ecl_results[0], '\tbars')
-            print('Flowrate actual:\t\t', '%.6f'%ecl_results[1], '\tkg/s')
-            print('\t\t\t\t', '%.6f'%(ecl_results[1] / self.surface_density), '\tsm3/s')
+            print("-" * 50)
+            print(f"{'Pressure actual [bar]:':30s} {'%.6f' % ecl_results[0]}")
+            print(f"{'Flowrate actual [kg/s]:':30s} {'%.6f' % ecl_results[1]}")
+            print(f"{' ':30s} {'%.6f' % (ecl_results[1] / self.surface_density)}" ' [sm3/s]')
         else:
-            print('Initial pressure is: \t', '%.6f'%ecl_results[0], 'bars')
-        print('----------------------------------------------------------------------------------------------------------------')
+            print(f"{'Initial pressure is: '} {'%.6f' % ecl_results[0]}" ' [bar]')
+        print("-" * 50)
         return (ecl_results[1], ecl_results[0])
 
 
@@ -221,9 +220,9 @@ class geo_sto:
                 #assemble new string for restart section
                 ecl_data_file[restart_pos + 1] =  '\'' + self.old_simulation_title + '\' \t'
                 ecl_data_file[restart_pos + 1] += str(int(self.restart_id) + timestep )  + ' /\n'
-                print('Assembled string for restart:')
-                print('\'' + self.old_simulation_title + '\'', str(int(self.restart_id) + timestep )  + ' /\n')
-                print( 'Restart id: ', self.restart_id, ' timestep: ', timestep)
+                # print('Assembled string for restart:')
+                # print('\'' + self.old_simulation_title + '\'', str(int(self.restart_id) + timestep )  + ' /\n')
+                # print( 'Restart id: ', self.restart_id, ' timestep: ', timestep)
 
         #now rearrange the well schedule section
         schedule_pos = util.searchSection(ecl_data_file, "WCONINJE")
@@ -544,13 +543,12 @@ class geo_sto:
 
         if not current_mode == 'init':
             print('Running storage simulation')
-            print('Dir: ', os.sep.join(os.path.normpath(self.working_dir_loc).split(os.sep)[-3:]))
-            print('SimTitle: ', self.current_simulation_title)
-            print('Timestep/iteration:\t\t', '%.0f' % tstep, '/', '%.0f' % iter_step)
-            print('Timestep size:\t\t\t', tstepsize, 's')
-            print('Target storage flowrate:', '%.6f' % target_flowrate, '\tkg/s')
-            print('\t\t\t\t\t\t', '%.6f' % (target_flowrate / self.surface_density), '\tsm3/s')
-            print('Operational mode:\t\t', current_mode)
+            print(f"{'Simulation title:':30s} {self.current_simulation_title}")
+            print(f"{'Timestep / iteration:':30s} {int(tstep)} / {int(iter_step)}")
+            print(f"{'Timestep size [s]:':30s} {tstepsize:.0f}")
+            print(f"{'Target flowrate [kg/s]:':30s} {target_flowrate:.6f}")  # storage flow rate
+            print(f"{'Target flowrate [sm3/s]:':30s} {(target_flowrate / self.surface_density):.6f}")
+            print(f"{'Operational mode:':30s} {current_mode}")
         else:
             print('Running storage simulation to obtain initial pressure')
         
@@ -566,15 +564,15 @@ class geo_sto:
         self.rework_proxy_results(tstep, iter_step)
 
         if not current_mode == 'init':
-            print('----------------------------------------------------------------------------------------------------------------')      
-            print('Pressure actual:\t\t', '%.6f' % proxy_results[0], '\tbars')
-            print('Flowrate actual:\t\t', '%.6f' % proxy_results[1], '\tkg/s')
-            print('\t\t\t\t\t\t', '%.6f' % (proxy_results[1] / self.surface_density), '\tsm3/s')
+            print("-" * 50)
+            print(f"{'Pressure actual [bar]:':30s} {'%.6f' % proxy_results[0]}")
+            print(f"{'Flowrate actual [kg/s]:':30s} {'%.6f' % proxy_results[1]}")
+            print(f"{' ':30s} {'%.6f' % (proxy_results[1] / self.surface_density)}" ' [sm3/s]')
         else:
-            print('Initial pressure is: \t', '%.6f' % proxy_results[0], 'bars')
-        print('----------------------------------------------------------------------------------------------------------------')
+            print(f"{'Initial pressure is:':30s} {'%.6f' % proxy_results[0]}" '[bar]')
+        print("-" * 50)
 
-        return proxy_results[1], proxy_results[0]
+        return (proxy_results[1], proxy_results[0])
     
     def execute_proxy(self):
         '''
@@ -639,7 +637,7 @@ class geo_sto:
             # get data from second line (first line shows variable unit)
             data = [line.strip().split('\t') for line in results[2:]]
             pressure_res = [float(data[0][i]) for i in pressure_idx]
-            
+
             # update pressure reservoir pressure in INITIAL PRESSURE keyword
             resprop_file[pressure_pos] = f' {round(pressure_res[0], 3)}\n'
 
@@ -674,7 +672,7 @@ class geo_sto:
 
         # extract header information
         header = results[0].strip().split('\t')
-  
+
         # find indices of relevant columns
         bhp_idx = util.getStringPositions(header, 'BHP')
         mfr_idx = util.getStringPositions(header, 'MFR')
