@@ -10,6 +10,8 @@ __author__ = "wtp, fgasa"
 from coupled_simulation import utilities as util
 import json
 import os
+import re
+import subprocess
 
 class geo_sto:
 
@@ -64,16 +66,18 @@ class geo_sto:
         #this is the entry point for the geostorage coupling
 
         if(self.simulator == 'ECLIPSE' or self.simulator == 'e300'):
-            flowrate, pressure = self.RunECLIPSE(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
+            flowrate, pressure = self.RunSimulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
         elif self.simulator == 'PROXY':
             flowrate, pressure = self.run_proxy(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
+        elif self.simulator == 'OPM':
+            flowrate, pressure = self.RunSimulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
         else:
             print('ERROR: simulator flag not understood. Is: ', self.simulator)
 
         return pressure, flowrate
 
 
-    def RunECLIPSE(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
+    def RunSimulator(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
         '''
         Function acting as a wrapper for using eclipse (SChlumberger) as a storage simulator
 
@@ -118,8 +122,11 @@ class geo_sto:
 
         # assembling current ecl data file
         self.reworkECLData(tstep, tstepsize, target_flowrate, current_mode)
-        # executing eclipse
-        self.ExecuteECLIPSE(tstep, iter_step, current_mode)
+        # executing reservoir simulator
+        if str(self.simulator).upper().startswith("OPM"):
+            self.execute_opm(tstep, iter_step)
+        else:
+            self.ExecuteECLIPSE(tstep, iter_step, current_mode)
         # reading results
         ecl_results = self.GetECLResults(tstep, current_mode)
 
@@ -179,6 +186,88 @@ class geo_sto:
 
         return output
 
+    def rearrangeRSMDataArray_OPM(self, rsm_lines):
+        """
+        Function to parse OPM  .RSM output with multiple 'SUMMARY OF RUN' blocks per timestep.
+        Return two strings (header_line, data_line) separated by tabs so downstream
+        """
+        date_regex = re.compile(r'\d{1,2}-[A-Z]{3}-\d{4}', re.IGNORECASE)
+        n = len(rsm_lines)
+        i = 0
+        blocks = []
+
+        # Walk lines and capture blocks starting at header "DATE ..."
+        while i < n:
+            line = rsm_lines[i]
+            if line.strip().startswith('DATE'):
+                header_line = line.rstrip('\n')
+                unit_line = rsm_lines[i+1].rstrip('\n') if i+1 < n else ''
+                well_line = rsm_lines[i+2].rstrip('\n') if i+2 < n else ''
+                # find first data line after the header chunk (line that matches date pattern)
+                j = i + 3
+                data_line = None
+                while j < n:
+                    if date_regex.search(rsm_lines[j]):
+                        data_line = rsm_lines[j].rstrip('\n')
+                        break
+                    j += 1
+                if data_line is not None:
+                    blocks.append((header_line, unit_line, well_line, data_line))
+                    i = j + 1
+                    continue
+            i += 1
+
+        # Merge blocks into unified header and data
+        combined_labels = []
+        combined_data = []
+        date_value = None
+
+        for (hdr, unit, wells, data) in blocks:
+            # normalize and split on two-or-more spaces to keep column groups
+            hdr_tokens = re.split(r'\s{2,}', hdr.strip())
+            wells_tokens = re.split(r'\s{2,}', wells.strip())
+            data_tokens = re.split(r'\s{2,}', data.strip())
+
+            # remove any leading page numbers such as '1' that sometimes prefix lines
+            if hdr_tokens and re.fullmatch(r'\d+', hdr_tokens[0].strip()):
+                hdr_tokens = hdr_tokens[1:]
+            if wells_tokens and re.fullmatch(r'\d+', wells_tokens[0].strip()):
+                wells_tokens = wells_tokens[1:]
+            if data_tokens and re.fullmatch(r'\d+', data_tokens[0].strip()):
+                data_tokens = data_tokens[1:]
+
+            # first token of data_tokens should be date string
+            if date_value is None and date_regex.search(data_tokens[0]):
+                date_value = data_tokens[0].strip()
+            # safety: ensure lengths align (hdr tokens minus DATE vs wells tokens)
+            # hdr_tokens often begin with 'DATE', so skip it
+            hdr_vars = hdr_tokens[1:] if hdr_tokens and hdr_tokens[0].upper().startswith('DATE') else hdr_tokens
+
+            # If lengths mismatch, try a forgiving approach: zip as far as possible
+            for idx, var in enumerate(hdr_vars):
+                try:
+                    wellname = wells_tokens[idx].strip()
+                except IndexError:
+                    # no matching well token, fallback to index-based name
+                    wellname = f'COL{idx}'
+                label = f"{var.strip()}_{wellname}"
+                combined_labels.append(label)
+
+                # get corresponding data token
+                try:
+                    val = data_tokens[idx+1].strip()  # +1 because data_tokens[0] is date
+                except Exception:
+                    val = 'n.a.'
+                combined_data.append(val)
+
+
+        if date_value is None:
+            date_value = 'n.a.'
+
+        header_line = 'DATE\t' + '\t'.join(combined_labels)
+        data_line = date_value + '\t' + '\t'.join(combined_data)
+        return [header_line + '\n', data_line + '\n']
+
 
     def reworkECLData(self, timestep, timestepsize, flowrate, op_mode):
         '''
@@ -223,6 +312,16 @@ class geo_sto:
                 # print('Assembled string for restart:')
                 # print('\'' + self.old_simulation_title + '\'', str(int(self.restart_id) + timestep )  + ' /\n')
                 # print( 'Restart id: ', self.restart_id, ' timestep: ', timestep)
+
+            # OPM-specific restart header workaround (.X0000 copy)
+            # only needed for OPM Flow. ECLIPSE typically produces the header itself.
+            if str(self.simulator).upper() == "OPM":
+                rst_file = (self.working_dir_loc + self.simulation_title_orig + "_TSTEP_" + str(
+                    timestep - 2) + ".X0000")
+                new_init_rst = (self.working_dir_loc + self.simulation_title_orig + "_TSTEP_" + str(
+                    timestep - 1) + ".X0000")
+                with open(rst_file, "rb") as fsrc, open(new_init_rst, "wb") as fdst:
+                    fdst.write(fsrc.read())
 
         #now rearrange the well schedule section
         schedule_pos = util.searchSection(ecl_data_file, "WCONINJE")
@@ -403,19 +502,28 @@ class geo_sto:
         results = util.getFile(filename)
         #print(results)
         #sort the rsm data to a more uniform dataset
-        reorderd_rsm_data = self.rearrangeRSMDataArray(results)
-        #print(reorderd_rsm_data)
-        #eleminate additional whitespaces, duplicate entries, etc.
+        # reorderd_rsm_data = self.rearrangeRSMDataArray(results)
+        if self.simulator == 'e300' or self.simulator == 'ECLIPSE':
+            reorderd_rsm_data = self.rearrangeRSMDataArray(results)
+
+        elif self.simulator == 'OPM':
+            reorderd_rsm_data = self.rearrangeRSMDataArray_OPM(results)
+
         well_results = util.contractDataArray(reorderd_rsm_data)
-        #print(well_results)
-        
+
+        # for OPM case, need extra row
+        if len(well_results) == 2:
+            # insert fake "units" line between header and first data
+            well_results.insert(1, ['-' for _ in well_results[0]])
+
         # check number of data entries in well_results:
-        
         entry_count_temp = 0
         if self.simulator == 'e300':
             entry_count_temp = 4
         elif self.simulator == 'ECLIPSE':
             entry_count_temp = 5
+        elif self.simulator == 'OPM':
+            entry_count_temp = 0
         values = len(well_results) - entry_count_temp
         if values > 1:
             print('Warning: possible loss of data, too many data lines in RSM file')
@@ -709,3 +817,43 @@ class geo_sto:
 
         # rename the current results file
         os.rename(f'{self.working_dir_loc}{self.simulation_title_orig}.RESULT_WELLS', new_filename)
+
+    def execute_opm(self, tstep, iter_step):
+
+        simulation_path = self.working_dir_loc + self.current_simulation_title + ".DATA"
+
+        if self.keep_ecl_logs == True:
+            log_file_path = (self.working_dir_loc + "log_" + self.current_simulation_title + "_" + str(tstep)
+                            + "_"  + str(iter_step)+ ".txt" )
+        else:
+            log_file_path = None
+
+        if os.name == 'nt':
+            # convert Windows path to WSL path
+            simulation_path_wsl = simulation_path.replace("\\", "/")
+            drive = simulation_path_wsl[0].lower()
+            simulation_path_wsl = f"/mnt/{drive}/{simulation_path_wsl[3:]}"
+
+            run_cmd = f"{self.simulator_path} {simulation_path_wsl} --enable-opm-rst-file=True"
+
+            if log_file_path is not None:
+                log_file_path_wsl = log_file_path.replace("\\", "/")
+                drive = log_file_path_wsl[0].lower()
+                log_file_path_wsl = f"/mnt/{drive}/{log_file_path_wsl[3:]}"
+                run_cmd = run_cmd + f" > {log_file_path_wsl} 2>&1"
+            else:
+                # silence output when logs disabled
+                run_cmd = run_cmd + " > /dev/null 2>&1"
+            subprocess.run(["wsl", "bash", "-c", run_cmd])
+            return
+
+         # linux execution
+        if os.name == "posix":
+            run_cmd = [self.simulator_path, simulation_path, "--enable-opm-rst-file=True"]
+
+            if log_file_path is not None:
+                with open(log_file_path, "w", encoding="utf-8") as logf:
+                    subprocess.run(run_cmd, stdout=logf, stderr=logf)
+            else:
+                subprocess.run(run_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
