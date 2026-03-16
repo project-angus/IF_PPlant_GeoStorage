@@ -8,19 +8,17 @@ Created on Mon Feb 12 15:17:46 2018
 
 # %% imports
 
-import pandas as pd
 import numpy as np
 import json
-from scipy import interpolate
 import logging
-from tespy.networks import load_network
+from tespy.networks import Network
 from tespy.tools import logger
 from tespy.connections import Ref
 from tespy.tools.helpers import TESPyNetworkError
-from tespy.tools import document_model
+from pathlib import Path
 
 logger.define_logging(
-    log_path=True, log_version=True, screen_level=logging.WARNING, file_level=logging.WARNING
+    logfile='tespy.log',  screen_level=logging.WARNING, file_level=logging.WARNING
 )
 # %% power plant model class
 
@@ -65,10 +63,11 @@ class model:
         }
         # load data.json information into objects dictionary (= attributes of
         # the object)
-        path = (cd.working_dir + cd.powerplant_path + cd.scenario + '.powerplant_ctrl.json')
-        self.wdir = cd.working_dir + cd.powerplant_path
+        # path = (cd.working_dir + cd.powerplant_path + cd.scenario + '.powerplant_ctrl.json')
+        self.wdir = Path(cd.working_dir) / cd.powerplant_path
         self.sc = cd.scenario
-        with open(path) as f:
+        ctrl_file = self.wdir / f"{cd.scenario}.powerplant_ctrl.json"
+        with open(ctrl_file) as f:
             self.__dict__.update(json.load(f))
 
         # well information
@@ -84,10 +83,12 @@ class model:
     def load_tespy_model(self):
 
         # load tespy models with the network_reader module
-        self.charge_model = load_network(self.wdir + self.charge['path'])
+        charge_path = self.wdir / f"{getattr(self, 'charge')['path']}_network.json"
+        self.charge_model = Network.from_json(str(charge_path))
         self.charge_model.set_attr(iterinfo=False)
         self.charge_model.solve('design', init_only=True)
-        self.discharge_model = load_network(self.wdir + self.discharge['path'])
+        discharge_path = self.wdir / f"{getattr(self, 'discharge')['path']}_network.json"
+        self.discharge_model = Network.from_json(str(discharge_path))
         self.discharge_model.set_attr(iterinfo=False)
         self.discharge_model.solve('design', init_only=True)
 
@@ -108,7 +109,7 @@ class model:
             pressure_conn = model.get_conn(model_data['pressure_conn'])
             massflow_conn = model.get_conn(model_data['massflow_conn'])
             power_bus = model.busses[model_data['power_bus']]
-
+            # shall we keep nominal target values consistent with the imported design case, or?
             power_bus.set_attr(P=model_data['power_nominal'])
             pressure_conn.set_attr(
                 p=model_data['pressure_nominal'],
@@ -118,15 +119,17 @@ class model:
             model.get_comp(self.storage['well_label']).set_attr(
                 L=self.min_well_depth
             )
-            model.solve('design')
-            document_model(model, path=self.wdir + '_report_design_' + mode)
-            model.save(self.wdir + self.sc + '_' + mode + '_design')
+            # we can now initialise from existing design state, do not solve a new design case?
+            # model.solve('design')
+
+            # model.save(self.wdir + self.sc + '_' + mode + '_design')
+            # model.save(str(self.wdir / f"{getattr(self, mode)['path']}_network.json"))
             m_nom = massflow_conn.m.val_SI
             setattr(self, 'm_nom_' + mode, m_nom)
             setattr(self, 'm_min_' + mode, m_nom * model_data['massflow_min_rel'])
             setattr(self, 'm_max_' + mode, m_nom * model_data['massflow_max_rel'])
 
-            print(getattr(self, 'm_min_' + mode))
+            # print(getattr(self, 'm_min_' + mode))
             msg = (
                 'Nominal mass flow for ' + mode + ' is ' +
                 str(m_nom) + ' at nominal power ' +
@@ -135,8 +138,8 @@ class model:
                 '.'
             )
             logging.debug(msg)
-            model.solve('offdesign', design_path=self.wdir + self.sc + '_' + mode + '_design')
-            document_model(model, path=self.wdir + '_report_offdesign_' + mode)
+            # model.solve('offdesign', design_path=self.wdir + self.sc + '_' + mode + '_design')
+            # model.solve("offdesign", design_path=str(str(self.wdir / f"{getattr(self, mode)['path']}_network.json")))
 
         msg = 'Finished power plant layout calculation.'
         logging.debug(msg)
@@ -169,14 +172,14 @@ class model:
         if mode == 'shut-in':
             return 0, 0, 0
 
-        if pressure + 1e-4 < self.p_min:
+        if pressure + 1e-4 < self.p_min and mode == 'discharge':
             msg = (
                 'Pressure is below minimum pressure: min=' + str(self.p_min) +
                 ', value=' + str(pressure) + '.'
             )
             logging.error(msg)
             return 0, 0, 0
-        elif pressure - 1e-4 > self.p_max:
+        elif pressure - 1e-4 > self.p_max and mode == 'charge':
             msg = (
                 'Pressure is above maximum pressure: max=' + str(self.p_max) +
                 ', value=' + str(pressure) + '.'
@@ -200,7 +203,8 @@ class model:
         power_bus = model.busses[model_data['power_bus']]
         heat_bus = model.busses[model_data['heat_bus']]
 
-        design_path = self.wdir + self.sc + '_' + mode + '_design'
+        # design_path = self.wdir + self.sc + '_' + mode + '_design'
+        design_path = (self.wdir / f"{getattr(self, mode)['path']}.json")
 
         if abs(power) < abs(power_nominal / 100):
             return 0, 0, 0
@@ -302,14 +306,14 @@ class model:
         if mode == 'shut-in':
             return 0, 0, 0
 
-        if pressure + 1e-4 < self.p_min:
+        if pressure + 1e-4 < self.p_min and mode == 'discharge':
             msg = (
                 'Pressure is below minimum pressure: min=' + str(self.p_min) +
                 ', value=' + str(pressure) + '.'
             )
             logging.error(msg)
             return 0, 0, 0
-        elif pressure - 1e-4 > self.p_max:
+        elif pressure - 1e-4 > self.p_max and mode == 'charge':
             msg = (
                 'Pressure is above maximum pressure: max=' + str(self.p_max) +
                 ', value=' + str(pressure) + '.'
