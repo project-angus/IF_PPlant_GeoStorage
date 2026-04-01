@@ -718,7 +718,7 @@ class geo_sto:
         flowrate_pos = util.searchSection(schedule_file, ' $CURVE') + 1
 
         if timestep == 0:
-            return
+            pass
 
         # update reservoir pressure
         if  timestep >= 1 and iter_step == 0: #maybe iter_step == 0 is enough
