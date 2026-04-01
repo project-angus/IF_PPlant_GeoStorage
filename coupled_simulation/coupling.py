@@ -42,7 +42,7 @@ def __main__(argv):
     except getopt.GetoptError:
         print('test.py -i <inputpath>')
         sys.exit(2)
-    print(opts)
+    # print(opts)
     print(argv)
     for opt, arg in opts:
         if opt == '-h':
@@ -188,7 +188,8 @@ def __main__(argv):
     print("=" * 111)
     print("\n" * 3)
 
-
+    # Load balancing for mismatched mass flow to restore initial storage level
+    '''
     if cd.balance_mass_eos:
 
         print('Balancing storage.')
@@ -246,6 +247,7 @@ def __main__(argv):
                                                         p_actual])
 
             output_ts.to_csv(cd.working_dir + cd.output_timeseries_path, index=False, sep=';')
+    '''
 
 def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
     """
@@ -428,7 +430,6 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
     sys.stdout.flush()
     return p1, m, m_corr, power_corr, heat, tstep_accepted, pp_off
 
-
 def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
     """
     calculates one timestep of coupled power plant - storage simulation
@@ -478,7 +479,6 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
     print('Operational mode of the system is is: ', storage_mode)
     sys.stdout.flush()
 
-
     #moved inner iteration into timestep function,
     #iterate until timestep is accepted
     p0_temp = p0
@@ -489,7 +489,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
             print('Message: Timestep accepted after iteration ', iter_step - 1)
             break
         print("-" * 50)
-        print('Current iteration:\t', iter_step)
+        print(f"{'Current iteration:':30s} {iter_step}")
         print("-" * 50)
         sys.stdout.flush()
 
@@ -607,12 +607,10 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
         p0_temp = p1
 
     if not tstep_accepted:
-        print('----------------------------------------------------------------------------------------------------------------')
-        print('----------------------------------------------------------------------------------------------------------------')
+        print("-" * 50)
         print('Problem: Results in timestep ', tstep, 'did not converge, accepting last iteration result.')
     sys.stdout.flush()
     return p1, m, m_corr, power_corr, heat, tstep_accepted, pp_off
-
 
 def read_series(path):
     """
@@ -628,7 +626,6 @@ def read_series(path):
     ts['power'] = ts['input'] - ts['output']
 
     return ts
-
 
 class coupling_data:
     """
@@ -691,21 +688,8 @@ class coupling_data:
         date_format = '%Y-%m-%d %H:%M:%S'
         self.t_start = datetime.datetime.strptime(self.t_start, date_format)
 
-        print('Reading inputile \"' + self.scenario + '.main_ctrl.json\" ')
+        print('Reading input file \"' + self.scenario + '.main_ctrl.json\" ')
         print('in working directory \"' + self.working_dir + '\"')
-
-'''        if self.debug:
-            print('DEBUG-OUTPUT for main control data')
-            print('Time series path:\t' + self.input_timeseries_path)
-            print('Start time:\t' + str(self.t_start))
-            print('Time step length:\t' + str(self.t_step_length))
-            print('Number of time steps:\t' + str(self.t_steps_total))
-            print('Iteration limits:\t' + str(self.min_iter) + '\t' +
-                  str(self.max_iter))
-            print('Pressure convergence criteria:\t' +
-                  str(self.pressure_diff_abs) +
-                  ' bars\t' + str(self.pressure_diff_rel * 100) + ' %')
-            print('END of DEBUG-OUTPUT for main control data')'''
 
 class Logger(object):
 
