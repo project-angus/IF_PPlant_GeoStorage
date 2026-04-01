@@ -1,2 +1,0 @@
-label;comp_type;busses;bus_param;bus_P_ref;bus_char;bus_base;design;offdesign;design_path;local_design;local_offdesign;P;P_set;P_var;eta_s;eta_s_set;eta_s_var;pr;pr_set;pr_var;eta_s_char;eta_s_char_set;eta_s_char_param;flow_char;flow_char_set;flow_char_param
-feed water pump;Pump;['power input'];[None];[13553.805797020932];['0x0000023050B4E820'];['bus'];['eta_s'];['eta_s_char'];nan;False;False;13147.191623110304;False;False;0.7500000001465496;True;False;20.000000000000007;False;False;0x000002306950C610;False;v;0x000002306950C280;False;v

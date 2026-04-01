@@ -1,4 +1,0 @@
-label;comp_type;busses;bus_param;bus_P_ref;bus_char;bus_base;design;offdesign;design_path;local_design;local_offdesign
-feed water;Source;[];[];[];[];[];[];[];nan;False;False
-power plant outlet source;Source;[];[];[];[];[];[];[];nan;False;False
-cooling water inlet;Source;[];[];[];[];[];[];[];nan;False;False
