@@ -3,13 +3,15 @@
 
 """
 
-__author__ = "wtp"
+__author__ = "wtp, fgasa"
 
 """
 
 from coupled_simulation import utilities as util
 import json
 import os
+import re
+import subprocess
 
 class geo_sto:
 
@@ -64,17 +66,18 @@ class geo_sto:
         #this is the entry point for the geostorage coupling
 
         if(self.simulator == 'ECLIPSE' or self.simulator == 'e300'):
-            flowrate, pressure = self.RunECLIPSE(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
-        elif self.simulator == 'proxy':
-            pass
-            #implement later (that is you firdovsi...)
+            flowrate, pressure = self.RunSimulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
+        elif self.simulator == 'PROXY':
+            flowrate, pressure = self.run_proxy(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
+        elif self.simulator == 'OPM':
+            flowrate, pressure = self.RunSimulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
         else:
             print('ERROR: simulator flag not understood. Is: ', self.simulator)
 
         return pressure, flowrate
 
 
-    def RunECLIPSE(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
+    def RunSimulator(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
         '''
         Function acting as a wrapper for using eclipse (SChlumberger) as a storage simulator
 
@@ -103,14 +106,13 @@ class geo_sto:
                 os.rename(self.working_dir_loc + self.old_simulation_title + '.DATA', self.working_dir_loc + self.current_simulation_title + '.DATA')
 
         if not current_mode == 'init':
-            print('Running storage simulation')
-            print('Dir: ', self.working_dir_loc)
-            print('SimTitle: ', self.current_simulation_title + '.DATA')
-            print('Timestep/iteration:\t\t', '%.0f'%tstep, '/', '%.0f'%iter_step)
-            print('Timestep size:\t\t\t', tstepsize, '\t\ts')
-            print('Target storage flowrate:\t', '%.6f'%target_flowrate, '\tkg/s')
-            print('\t\t\t\t', '%.6f'%(target_flowrate / self.surface_density), '\tsm3/s')
-            print('Operational mode:\t\t', current_mode)
+            print(f"{'Running storage simulation'}")
+            print(f"{'Simulation title:':30s} {self.current_simulation_title}")
+            print(f"{'Timestep / iteration:':30s} {int(tstep)} / {int(iter_step)}")
+            print(f"{'Timestep size [s]:':30s} {tstepsize:.0f}")
+            print(f"{'Target flowrate [kg/s]:':30s} {target_flowrate:.6f}")  # storage flow rate
+            print(f"{'Target flowrate [sm3/s]:':30s} {(target_flowrate / self.surface_density):.6f}")
+            print(f"{'Operational mode:':30s} {current_mode}")
 
         else:
             print('Running storage simulation to obtain initial pressure')
@@ -120,8 +122,11 @@ class geo_sto:
 
         # assembling current ecl data file
         self.reworkECLData(tstep, tstepsize, target_flowrate, current_mode)
-        # executing eclipse
-        self.ExecuteECLIPSE(tstep, iter_step, current_mode)
+        # executing reservoir simulator
+        if str(self.simulator).upper().startswith("OPM"):
+            self.execute_opm(tstep, iter_step)
+        else:
+            self.ExecuteECLIPSE(tstep, iter_step, current_mode)
         # reading results
         ecl_results = self.GetECLResults(tstep, current_mode)
 
@@ -129,13 +134,13 @@ class geo_sto:
         ecl_results[1] = ecl_results[1] * self.surface_density
 
         if not current_mode == 'init':
-            print('----------------------------------------------------------------------------------------------------------------')
-            print('Pressure actual:\t\t', '%.6f'%ecl_results[0], '\tbars')
-            print('Flowrate actual:\t\t', '%.6f'%ecl_results[1], '\tkg/s')
-            print('\t\t\t\t', '%.6f'%(ecl_results[1] / self.surface_density), '\tsm3/s')
+            print("-" * 50)
+            print(f"{'Pressure actual [bar]:':30s} {'%.6f' % ecl_results[0]}")
+            print(f"{'Flowrate actual [kg/s]:':30s} {'%.6f' % ecl_results[1]}")
+            print(f"{' ':30s} {'%.6f' % (ecl_results[1] / self.surface_density)}" ' [sm3/s]')
         else:
-            print('Initial pressure is: \t', '%.6f'%ecl_results[0], 'bars')
-        print('----------------------------------------------------------------------------------------------------------------')
+            print(f"{'Initial pressure is: '} {'%.6f' % ecl_results[0]}" ' [bar]')
+        print("-" * 50)
         return (ecl_results[1], ecl_results[0])
 
 
@@ -181,6 +186,88 @@ class geo_sto:
 
         return output
 
+    def rearrangeRSMDataArray_OPM(self, rsm_lines):
+        """
+        Function to parse OPM  .RSM output with multiple 'SUMMARY OF RUN' blocks per timestep.
+        Return two strings (header_line, data_line) separated by tabs so downstream
+        """
+        date_regex = re.compile(r'\d{1,2}-[A-Z]{3}-\d{4}', re.IGNORECASE)
+        n = len(rsm_lines)
+        i = 0
+        blocks = []
+
+        # Walk lines and capture blocks starting at header "DATE ..."
+        while i < n:
+            line = rsm_lines[i]
+            if line.strip().startswith('DATE'):
+                header_line = line.rstrip('\n')
+                unit_line = rsm_lines[i+1].rstrip('\n') if i+1 < n else ''
+                well_line = rsm_lines[i+2].rstrip('\n') if i+2 < n else ''
+                # find first data line after the header chunk (line that matches date pattern)
+                j = i + 3
+                data_line = None
+                while j < n:
+                    if date_regex.search(rsm_lines[j]):
+                        data_line = rsm_lines[j].rstrip('\n')
+                        break
+                    j += 1
+                if data_line is not None:
+                    blocks.append((header_line, unit_line, well_line, data_line))
+                    i = j + 1
+                    continue
+            i += 1
+
+        # Merge blocks into unified header and data
+        combined_labels = []
+        combined_data = []
+        date_value = None
+
+        for (hdr, unit, wells, data) in blocks:
+            # normalize and split on two-or-more spaces to keep column groups
+            hdr_tokens = re.split(r'\s{2,}', hdr.strip())
+            wells_tokens = re.split(r'\s{2,}', wells.strip())
+            data_tokens = re.split(r'\s{2,}', data.strip())
+
+            # remove any leading page numbers such as '1' that sometimes prefix lines
+            if hdr_tokens and re.fullmatch(r'\d+', hdr_tokens[0].strip()):
+                hdr_tokens = hdr_tokens[1:]
+            if wells_tokens and re.fullmatch(r'\d+', wells_tokens[0].strip()):
+                wells_tokens = wells_tokens[1:]
+            if data_tokens and re.fullmatch(r'\d+', data_tokens[0].strip()):
+                data_tokens = data_tokens[1:]
+
+            # first token of data_tokens should be date string
+            if date_value is None and date_regex.search(data_tokens[0]):
+                date_value = data_tokens[0].strip()
+            # safety: ensure lengths align (hdr tokens minus DATE vs wells tokens)
+            # hdr_tokens often begin with 'DATE', so skip it
+            hdr_vars = hdr_tokens[1:] if hdr_tokens and hdr_tokens[0].upper().startswith('DATE') else hdr_tokens
+
+            # If lengths mismatch, try a forgiving approach: zip as far as possible
+            for idx, var in enumerate(hdr_vars):
+                try:
+                    wellname = wells_tokens[idx].strip()
+                except IndexError:
+                    # no matching well token, fallback to index-based name
+                    wellname = f'COL{idx}'
+                label = f"{var.strip()}_{wellname}"
+                combined_labels.append(label)
+
+                # get corresponding data token
+                try:
+                    val = data_tokens[idx+1].strip()  # +1 because data_tokens[0] is date
+                except Exception:
+                    val = 'n.a.'
+                combined_data.append(val)
+
+
+        if date_value is None:
+            date_value = 'n.a.'
+
+        header_line = 'DATE\t' + '\t'.join(combined_labels)
+        data_line = date_value + '\t' + '\t'.join(combined_data)
+        return [header_line + '\n', data_line + '\n']
+
 
     def reworkECLData(self, timestep, timestepsize, flowrate, op_mode):
         '''
@@ -222,9 +309,19 @@ class geo_sto:
                 #assemble new string for restart section
                 ecl_data_file[restart_pos + 1] =  '\'' + self.old_simulation_title + '\' \t'
                 ecl_data_file[restart_pos + 1] += str(int(self.restart_id) + timestep )  + ' /\n'
-                print('Assembled string for restart:')
-                print('\'' + self.old_simulation_title + '\'', str(int(self.restart_id) + timestep )  + ' /\n')
-                print( 'Restart id: ', self.restart_id, ' timestep: ', timestep)
+                # print('Assembled string for restart:')
+                # print('\'' + self.old_simulation_title + '\'', str(int(self.restart_id) + timestep )  + ' /\n')
+                # print( 'Restart id: ', self.restart_id, ' timestep: ', timestep)
+
+            # OPM-specific restart header workaround (.X0000 copy)
+            # only needed for OPM Flow. ECLIPSE typically produces the header itself.
+            if str(self.simulator).upper() == "OPM":
+                rst_file = (self.working_dir_loc + self.simulation_title_orig + "_TSTEP_" + str(
+                    timestep - 2) + ".X0000")
+                new_init_rst = (self.working_dir_loc + self.simulation_title_orig + "_TSTEP_" + str(
+                    timestep - 1) + ".X0000")
+                with open(rst_file, "rb") as fsrc, open(new_init_rst, "wb") as fdst:
+                    fdst.write(fsrc.read())
 
         #now rearrange the well schedule section
         schedule_pos = util.searchSection(ecl_data_file, "WCONINJE")
@@ -340,6 +437,11 @@ class geo_sto:
             self.working_dir_loc + self.old_simulation_title + ".FSMSPEC",
             self.working_dir_loc + self.old_simulation_title + ".UNSMRY",
             self.working_dir_loc + self.old_simulation_title + ".FUNSMRY",
+            self.working_dir_loc + self.old_simulation_title + ".PRTX",
+            self.working_dir_loc + self.old_simulation_title + ".RTEMSG",
+            self.working_dir_loc + self.old_simulation_title + ".default",
+            self.working_dir_loc + self.old_simulation_title + ".session",
+            self.working_dir_loc + self.old_simulation_title + ".sessionlock",
         ]
         for entry in termination_list:
             #print('Deleting: ', entry)
@@ -400,19 +502,28 @@ class geo_sto:
         results = util.getFile(filename)
         #print(results)
         #sort the rsm data to a more uniform dataset
-        reorderd_rsm_data = self.rearrangeRSMDataArray(results)
-        #print(reorderd_rsm_data)
-        #eleminate additional whitespaces, duplicate entries, etc.
+        # reorderd_rsm_data = self.rearrangeRSMDataArray(results)
+        if self.simulator == 'e300' or self.simulator == 'ECLIPSE':
+            reorderd_rsm_data = self.rearrangeRSMDataArray(results)
+
+        elif self.simulator == 'OPM':
+            reorderd_rsm_data = self.rearrangeRSMDataArray_OPM(results)
+
         well_results = util.contractDataArray(reorderd_rsm_data)
-        #print(well_results)
-        
+
+        # for OPM case, need extra row
+        if len(well_results) == 2:
+            # insert fake "units" line between header and first data
+            well_results.insert(1, ['-' for _ in well_results[0]])
+
         # check number of data entries in well_results:
-        
         entry_count_temp = 0
         if self.simulator == 'e300':
             entry_count_temp = 4
         elif self.simulator == 'ECLIPSE':
             entry_count_temp = 5
+        elif self.simulator == 'OPM':
+            entry_count_temp = 0
         values = len(well_results) - entry_count_temp
         if values > 1:
             print('Warning: possible loss of data, too many data lines in RSM file')
@@ -519,6 +630,230 @@ class geo_sto:
 
         return [0.0, 0.0]
 
+    def run_proxy(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
+        """
+        function acting as a wrapper for using PROXY simulator as a storage simulator
 
+        :param target_flow_rate: target storage flow rate in sm3/d
+        :param tstep: current timestep
+        :param iter_step: current iteration step
+        :param tstepsize: length of current timestep
+        :param current_mode: current operational mode, either 'charging', 'discharging' or 'shut-in'
+        :returns: tuple of new pressure at the well (in reservoir) and actual (achieved) storage flow rate
+        """
 
+        if tstep < 0 or current_mode == 'init':
+            self.current_simulation_title = self.simulation_title_orig
 
+        if tstep >= 0:
+            self.old_simulation_title = self.current_simulation_title
+            self.current_simulation_title = f"{self.simulation_title_orig}_TSTEP_{tstep}_{iter_step}"
+
+        if not current_mode == 'init':
+            print('Running storage simulation')
+            print(f"{'Simulation title:':30s} {self.current_simulation_title}")
+            print(f"{'Timestep / iteration:':30s} {int(tstep)} / {int(iter_step)}")
+            print(f"{'Timestep size [s]:':30s} {tstepsize:.0f}")
+            print(f"{'Target flowrate [kg/s]:':30s} {target_flowrate:.6f}")  # storage flow rate
+            print(f"{'Target flowrate [sm3/s]:':30s} {(target_flowrate / self.surface_density):.6f}")
+            print(f"{'Operational mode:':30s} {current_mode}")
+        else:
+            print('Running storage simulation to obtain initial pressure')
+        
+        # change unit of flowrates to kg/s from kg/d
+        target_flowrate = target_flowrate / self.surface_density * 60.0 * 60.0 * 24.0
+
+        self.rework_proxy_data(tstep, iter_step, target_flowrate, current_mode)
+        
+        self.execute_proxy()
+
+        proxy_results = self.get_proxy_results(current_mode)
+    
+        self.rework_proxy_results(tstep, iter_step)
+
+        if not current_mode == 'init':
+            print("-" * 50)
+            print(f"{'Pressure actual [bar]:':30s} {'%.6f' % proxy_results[0]}")
+            print(f"{'Flowrate actual [kg/s]:':30s} {'%.6f' % proxy_results[1]}")
+            print(f"{' ':30s} {'%.6f' % (proxy_results[1] / self.surface_density)}" ' [sm3/s]')
+        else:
+            print(f"{'Initial pressure is:':30s} {'%.6f' % proxy_results[0]}" '[bar]')
+        print("-" * 50)
+
+        return (proxy_results[1], proxy_results[0])
+    
+    def execute_proxy(self):
+        '''
+        function to call PROXY simulator executable
+
+        :returns: no return value
+        '''
+
+        if os.name == 'nt':
+            # simulation_path = ''
+            simulation_path = self.working_dir_loc + self.simulation_title_orig #proxy simulator uses only one unique name
+
+            if self.keep_ecl_logs == True:
+                log_file_path = f'{self.working_dir_loc}{self.current_simulation_title}.log'
+    
+            else:
+                log_file_path = 'NUL'
+            temp = f'{self.simulator_path}\\sAGSS.exe {simulation_path} > {log_file_path}'
+
+            os.system(temp)
+
+    def rework_proxy_data(self, timestep, iter_step, flowrate, op_mode):
+        '''
+        function to change settings in the PROXY input file required for the storage simulation
+
+        :param timestep: current timestep of simulation, type: int
+        :param flowrate: current target storage flow rate from power plant simulation, type: float
+        :param op_mode: current operational mode, either 'charging', 'discharging' or 'shut-in', type: str
+        :returns: no return value
+        '''
+        # open and read eclipse data file
+
+        schedule_path = f'{self.working_dir_loc}{self.simulation_title_orig}.schedule'
+        schedule_file = util.getFile(schedule_path)
+        flowrate_pos = util.searchSection(schedule_file, ' $CURVE') + 1
+
+        if timestep == 0:
+            pass
+
+        # update reservoir pressure
+        if  timestep >= 1 and iter_step == 0: #maybe iter_step == 0 is enough
+
+            resprop_path = f'{self.working_dir_loc}{self.simulation_title_orig}.res_prop'
+            resprop_file = util.getFile(resprop_path)
+            pressure_pos = util.searchSection(resprop_file, ' $INITIAL_PRESSURE') + 1
+
+            # retrieve the previous flow rate and mass volume using the results from the current simulation
+            result_temp_path = f'{self.working_dir_loc}{self.old_simulation_title}.RESULT_WELLS'
+
+            results = util.getFile(result_temp_path)
+            
+            if len(results) <= 1:
+                print('Warning: there is no simulation result')
+                return [None, None]
+
+            # extract header information
+            header = results[0].strip().split('\t')
+
+            # find indices of relevant keyword
+            pressure_idx = util.getStringPositions(header, 'RES_PRESS')
+
+            # get data from second line (first line shows variable unit)
+            data = [line.strip().split('\t') for line in results[2:]]
+            pressure_res = [float(data[0][i]) for i in pressure_idx]
+
+            # update pressure reservoir pressure in INITIAL PRESSURE keyword
+            resprop_file[pressure_pos] = f' {round(pressure_res[0], 3)}\n'
+
+            util.writeFile(resprop_path, resprop_file)
+
+        if op_mode == 'charging':
+           schedule_file[flowrate_pos] = f' 0 {round(flowrate, 3)}\n'
+
+        elif op_mode == 'discharging':
+           schedule_file[flowrate_pos] = f' 0 {round(-flowrate, 3)}\n'
+
+        elif op_mode == 'shut-in' or op_mode == 'init':
+           schedule_file[flowrate_pos] = ' 0 0\n'
+
+        # update flow rate in the CURVE keyword
+        util.writeFile(schedule_path, schedule_file)
+
+    def get_proxy_results(self, current_op_mode):
+        '''
+        function to get the PROXY results from the *.RESULTS_WELLS file and derive the pressure and actual flow rate data
+
+        :param timestep: current timestep, type: int
+        :param current_op_mode: operational mode, either 'charging', 'discharging' or 'shut-in', type: str
+        :returns: returns a tuple of float values containing pressure and actual storage flow rate
+        '''
+        file_path = f'{self.working_dir_loc}{self.simulation_title_orig}.RESULT_WELLS'
+        results = util.getFile(file_path)
+
+        if len(results) <= 1:
+            print('Warning: there is no simulation result')
+            return [None, None]
+
+        # extract header information
+        header = results[0].strip().split('\t')
+
+        # find indices of relevant columns
+        bhp_idx = util.getStringPositions(header, 'BHP')
+        mfr_idx = util.getStringPositions(header, 'MFR')
+  
+        # extract rate and pressure data from second line (first is unit row)
+        data = [line.strip().split('\t') for line in results[2:]]
+
+        bhp_data = [float(data[0][i]) for i in bhp_idx]
+        mfr_data = [float(data[0][i]) for i in mfr_idx]
+
+        # storage pressure based on each WBHP
+        pressure_actual = sum(bhp_data) / len(bhp_data)
+        flowrate_actual = sum(mfr_data) / 60.0 / 60.0 / 24.0
+
+        if current_op_mode == 'discharging':
+            flowrate_actual = -flowrate_actual
+        elif current_op_mode == 'init':
+            flowrate_actual = flowrate_actual / 60.0 / 60.0 / 24.0
+
+        return [pressure_actual, flowrate_actual]
+    
+    def rework_proxy_results(self, timestep, iter_step):
+        """
+        function to rework the PROXY results file name to include the current time step and iteration step and rename the current results file
+        
+        :param timestep: the current time step, type: int
+        :param iter_step: the current iteration step, type: int
+        """
+        # define the new file name
+        if timestep < 0:
+            new_filename = f'{self.working_dir_loc}{self.simulation_title_orig}_TSTEP_{timestep}_{iter_step}.RESULT_WELLS'
+        else:
+            new_filename = f'{self.working_dir_loc}{self.current_simulation_title}.RESULT_WELLS'
+
+        # rename the current results file
+        os.rename(f'{self.working_dir_loc}{self.simulation_title_orig}.RESULT_WELLS', new_filename)
+
+    def execute_opm(self, tstep, iter_step):
+
+        simulation_path = self.working_dir_loc + self.current_simulation_title + ".DATA"
+
+        if self.keep_ecl_logs == True:
+            log_file_path = (self.working_dir_loc + "log_" + self.current_simulation_title + "_" + str(tstep)
+                            + "_"  + str(iter_step)+ ".txt" )
+        else:
+            log_file_path = None
+
+        if os.name == 'nt':
+            # convert Windows path to WSL path
+            simulation_path_wsl = simulation_path.replace("\\", "/")
+            drive = simulation_path_wsl[0].lower()
+            simulation_path_wsl = f"/mnt/{drive}/{simulation_path_wsl[3:]}"
+
+            run_cmd = f"{self.simulator_path} {simulation_path_wsl} --enable-opm-rst-file=True"
+
+            if log_file_path is not None:
+                log_file_path_wsl = log_file_path.replace("\\", "/")
+                drive = log_file_path_wsl[0].lower()
+                log_file_path_wsl = f"/mnt/{drive}/{log_file_path_wsl[3:]}"
+                run_cmd = run_cmd + f" > {log_file_path_wsl} 2>&1"
+            else:
+                # silence output when logs disabled
+                run_cmd = run_cmd + " > /dev/null 2>&1"
+            subprocess.run(["wsl", "bash", "-c", run_cmd])
+            return
+
+         # linux execution
+        if os.name == "posix":
+            run_cmd = [self.simulator_path, simulation_path, "--enable-opm-rst-file=True"]
+
+            if log_file_path is not None:
+                with open(log_file_path, "w", encoding="utf-8") as logf:
+                    subprocess.run(run_cmd, stdout=logf, stderr=logf)
+            else:
+                subprocess.run(run_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return

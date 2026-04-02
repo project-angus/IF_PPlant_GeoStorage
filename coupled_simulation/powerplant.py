@@ -8,19 +8,17 @@ Created on Mon Feb 12 15:17:46 2018
 
 # %% imports
 
-import pandas as pd
 import numpy as np
 import json
-from scipy import interpolate
 import logging
-from tespy.networks import load_network
+from tespy.networks import Network
 from tespy.tools import logger
 from tespy.connections import Ref
 from tespy.tools.helpers import TESPyNetworkError
-from tespy.tools import document_model
+from pathlib import Path
 
 logger.define_logging(
-    log_path=True, log_version=True, screen_level=logging.WARNING, file_level=logging.WARNING
+    logfile='tespy.log',  screen_level=logging.WARNING, file_level=logging.WARNING
 )
 # %% power plant model class
 
@@ -63,12 +61,11 @@ class model:
             'charging': 'charge',
             'discharging': 'discharge'
         }
-        # load data.json information into objects dictionary (= attributes of
-        # the object)
-        path = (cd.working_dir + cd.powerplant_path + cd.scenario + '.powerplant_ctrl.json')
-        self.wdir = cd.working_dir + cd.powerplant_path
+
+        self.wdir = Path(cd.working_dir) / cd.powerplant_path
         self.sc = cd.scenario
-        with open(path) as f:
+        ctrl_file = self.wdir / f"{cd.scenario}.powerplant_ctrl.json"
+        with open(ctrl_file) as f:
             self.__dict__.update(json.load(f))
 
         # well information
@@ -84,10 +81,12 @@ class model:
     def load_tespy_model(self):
 
         # load tespy models with the network_reader module
-        self.charge_model = load_network(self.wdir + self.charge['path'])
+        charge_path = self.wdir / f"{getattr(self, 'charge')['path']}_network.json"
+        self.charge_model = Network.from_json(str(charge_path))
         self.charge_model.set_attr(iterinfo=False)
         self.charge_model.solve('design', init_only=True)
-        self.discharge_model = load_network(self.wdir + self.discharge['path'])
+        discharge_path = self.wdir / f"{getattr(self, 'discharge')['path']}_network.json"
+        self.discharge_model = Network.from_json(str(discharge_path))
         self.discharge_model.set_attr(iterinfo=False)
         self.discharge_model.solve('design', init_only=True)
 
@@ -99,7 +98,7 @@ class model:
         nominal power input/output and nominal pressure as inputs.
         """
         msg = 'Starting power plant layout calculation.'
-        logging.debug(msg)
+        # logging.debug(msg)
 
         for mode in ['charge', 'discharge']:
 
@@ -108,25 +107,27 @@ class model:
             pressure_conn = model.get_conn(model_data['pressure_conn'])
             massflow_conn = model.get_conn(model_data['massflow_conn'])
             power_bus = model.busses[model_data['power_bus']]
-
+            # shall we keep nominal target values consistent with the imported design case, or?
             power_bus.set_attr(P=model_data['power_nominal'])
             pressure_conn.set_attr(
                 p=model_data['pressure_nominal'],
                 m=Ref(massflow_conn, 1 / self.num_wells, 0)
             )
-            massflow_conn.set_attr(m=np.nan)
+            massflow_conn.set_attr(m=None)
             model.get_comp(self.storage['well_label']).set_attr(
                 L=self.min_well_depth
             )
+
             model.solve('design')
-            document_model(model, path=self.wdir + '_report_design_' + mode)
-            model.save(self.wdir + self.sc + '_' + mode + '_design')
+            design_save_path = str(self.wdir / f"{self.sc}_{mode}_design.json")
+            model.save(design_save_path)
+
             m_nom = massflow_conn.m.val_SI
             setattr(self, 'm_nom_' + mode, m_nom)
             setattr(self, 'm_min_' + mode, m_nom * model_data['massflow_min_rel'])
             setattr(self, 'm_max_' + mode, m_nom * model_data['massflow_max_rel'])
 
-            print(getattr(self, 'm_min_' + mode))
+            # print(getattr(self, 'm_min_' + mode))
             msg = (
                 'Nominal mass flow for ' + mode + ' is ' +
                 str(m_nom) + ' at nominal power ' +
@@ -134,12 +135,11 @@ class model:
                 'pressure ' + str(model_data['pressure_nominal']) +
                 '.'
             )
-            logging.debug(msg)
-            model.solve('offdesign', design_path=self.wdir + self.sc + '_' + mode + '_design')
-            document_model(model, path=self.wdir + '_report_offdesign_' + mode)
+            # logging.debug(msg)
+            model.solve("offdesign", design_path=design_save_path)
 
         msg = 'Finished power plant layout calculation.'
-        logging.debug(msg)
+        # logging.debug(msg)
 
     def get_mass_flow(self, power, pressure, mode):
         """
@@ -169,14 +169,14 @@ class model:
         if mode == 'shut-in':
             return 0, 0, 0
 
-        if pressure + 1e-4 < self.p_min:
+        if pressure + 1e-4 < self.p_min and mode == 'discharge':
             msg = (
                 'Pressure is below minimum pressure: min=' + str(self.p_min) +
                 ', value=' + str(pressure) + '.'
             )
             logging.error(msg)
             return 0, 0, 0
-        elif pressure - 1e-4 > self.p_max:
+        elif pressure - 1e-4 > self.p_max and mode == 'charge':
             msg = (
                 'Pressure is above maximum pressure: max=' + str(self.p_max) +
                 ', value=' + str(pressure) + '.'
@@ -200,9 +200,16 @@ class model:
         power_bus = model.busses[model_data['power_bus']]
         heat_bus = model.busses[model_data['heat_bus']]
 
-        design_path = self.wdir + self.sc + '_' + mode + '_design'
+        # design_path = self.wdir + self.sc + '_' + mode + '_design'
+        design_path = str(self.wdir / f"{self.sc}_{mode}_design.json")
 
+        # To prevent the solver from entering the surge region. Let's set the minimum part-load limit ?
+        # power_min_rel = model_data.get('power_min_rel', 0.01)  # fallback to 1% if key is missing
+        # if abs(power) < abs(power_nominal * power_min_rel):
         if abs(power) < abs(power_nominal / 100):
+            msg = (f"Target power ({power / 1e6:.2f} MW) is below minimum stable part-load limit")
+            print(msg)
+            logging.warning(msg)
             return 0, 0, 0
 
         try:
@@ -215,7 +222,7 @@ class model:
                 model.solve(mode='offdesign', design_path=design_path)
 
             # adjust power value in steps of 10 % relative to nominal power
-            massflow_conn.set_attr(m=np.nan)
+            massflow_conn.set_attr(m=None)
             num = int(
                 abs(power - power_bus.P.val) // abs(0.2 * power_nominal)) + 1
             power_range = np.linspace(power, power_bus.P.val, num, endpoint=False)
@@ -242,7 +249,7 @@ class model:
             return 0, 0, 0
 
     def check_results(self, model, massflow, massflow_min, massflow_max, power, pressure, heat, mode):
-        if model.res[-1] > 1e-3:
+        if model.residual[-1] > 1e-3:
             msg = (
                 'Could not find a solution for input pair power=' + str(power) +
                 ' pressure=' + str(pressure) + ', resetting starting values ' +
@@ -273,7 +280,7 @@ class model:
                 ' pressure=' + str(pressure) + '. Mass flow=' + str(massflow) + '.'
             )
             print(msg)
-            logging.debug(msg)
+            # logging.debug(msg)
             return massflow, power, heat
 
     def get_power(self, mass_flow, pressure, mode):
@@ -302,14 +309,14 @@ class model:
         if mode == 'shut-in':
             return 0, 0, 0
 
-        if pressure + 1e-4 < self.p_min:
+        if pressure + 1e-4 < self.p_min and mode == 'discharge':
             msg = (
                 'Pressure is below minimum pressure: min=' + str(self.p_min) +
                 ', value=' + str(pressure) + '.'
             )
             logging.error(msg)
             return 0, 0, 0
-        elif pressure - 1e-4 > self.p_max:
+        elif pressure - 1e-4 > self.p_max and mode == 'charge':
             msg = (
                 'Pressure is above maximum pressure: max=' + str(self.p_max) +
                 ', value=' + str(pressure) + '.'
@@ -333,7 +340,7 @@ class model:
         power_bus = model.busses[model_data['power_bus']]
         heat_bus = model.busses[model_data['heat_bus']]
 
-        design_path = self.wdir + self.sc + '_' + mode + '_design'
+        design_path = str(self.wdir / f"{self.sc}_{mode}_design.json")
 
         if mass_flow < massflow_min - 1e-4:
             msg = (
@@ -362,7 +369,7 @@ class model:
                 model.solve(mode='offdesign', design_path=design_path)
 
             # unset power of bus and set massflow instead
-            power_bus.set_attr(P=np.nan)
+            power_bus.set_attr(P=None)
             # adjust mass flow value in steps of 5 % relative to nominal power
             num = int(
                 abs(mass_flow - massflow_conn.m.val) // abs(0.05 * massflow_nominal)) + 1
@@ -378,7 +385,7 @@ class model:
                 ' pressure=' + str(pressure) + '. Power=' + str(power) + '.'
             )
             print(msg)
-            logging.debug(msg)
+            # logging.debug(msg)
             return mass_flow, power, heat
 
         except (ValueError, TESPyNetworkError) as e:
