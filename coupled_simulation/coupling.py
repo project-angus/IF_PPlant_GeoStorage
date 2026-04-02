@@ -84,7 +84,7 @@ def __main__(argv):
     print("=" * 111)
     print('Reading input time series...')
 
-    input_ts = read_series(cd.working_dir + cd.input_timeseries_path)
+    input_ts = read_series(os.path.join(cd.working_dir, cd.input_timeseries_path))
 
     #prepare data structures
     print("=" * 111)
@@ -656,33 +656,10 @@ class coupling_data:
 
         :returns: no return value
         """
-        #print("path is: ", self.path)
-
-        str_tmp = self.path[:-15]
-        #print("str_tmp is: ", str_tmp)
-        self.scenario = ""
-        self.working_dir = ""
-
-        i = 0
-        key = ""
-        if os.name == 'nt':
-            key = "\\"
-        elif os.name == 'posix':
-            key = "/"
-        else:
-            print('Error: OS not supported')
-
-
-        for c in str_tmp[::-1]:
-            if c == key:
-                self.working_dir = str_tmp[:-i]
-                break
-            self.scenario += c
-            i += 1
-        #print("Scenario is: ", self.scenario)
-
-        self.scenario = self.scenario[::-1]
-        #print("Scenario is now: ", self.scenario)
+        suffix = '.main_ctrl.json'
+        base = self.path[:-len(suffix)] if self.path.endswith(suffix) else self.path
+        self.working_dir = os.path.dirname(base)
+        self.scenario = os.path.basename(base)
 
         self.debug = bool(self.debug)
         date_format = '%Y-%m-%d %H:%M:%S'

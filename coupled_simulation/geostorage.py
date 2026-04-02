@@ -23,9 +23,9 @@ class geo_sto:
 
         # load data.json information into objects dictionary (= attributes of
         # the object)
-        path = (cd.working_dir + cd.geostorage_path + cd.scenario +
-                '.geostorage_ctrl.json')
-        wdir = cd.working_dir + cd.geostorage_path
+        geostorage_path = cd.geostorage_path.replace('\\', os.sep).strip(os.sep)
+        wdir = os.path.join(cd.working_dir, geostorage_path)
+        path = os.path.join(wdir, f"{cd.scenario}.geostorage_ctrl.json")
         with open(path) as f:
             self.__dict__.update(json.load(f))
 
@@ -99,11 +99,17 @@ class geo_sto:
 
         if current_mode == 'init':
             self.current_simulation_title = self.simulation_title_orig + '_TSTEP_INIT'
-            os.rename(self.working_dir_loc + self.simulation_title_orig  + '.DATA', self.working_dir_loc + self.current_simulation_title + '.DATA')
+            os.rename(
+                os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.DATA"),
+                os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.DATA")
+            )
         else:
             if iter_step == 0:
                 self.current_simulation_title = self.simulation_title_orig + '_TSTEP_' + str(tstep)
-                os.rename(self.working_dir_loc + self.old_simulation_title + '.DATA', self.working_dir_loc + self.current_simulation_title + '.DATA')
+                os.rename(
+                    os.path.join(self.working_dir_loc, f"{self.old_simulation_title}.DATA"),
+                    os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.DATA")
+                )
 
         if not current_mode == 'init':
             print(f"{'Running storage simulation'}")
@@ -154,7 +160,7 @@ class geo_sto:
         '''
         # function to re-order / get rid off line breaks etc. in input
         #break_count = util.getStringCount(rsm_list, 'SUMMARY OF RUN')
-        
+
         break_positions = util.getStringPositions(rsm_list, 'SUMMARY OF RUN')
         break_count = len(break_positions)
 
@@ -284,7 +290,7 @@ class geo_sto:
         :returns: no return value
         '''
         # open and read eclipse data file
-        ecl_data_file = util.getFile(self.working_dir_loc + self.current_simulation_title + '.DATA')
+        ecl_data_file = util.getFile(os.path.join(self.working_dir_loc, self.current_simulation_title + '.DATA'))
         #print(self.working_dir_loc + self.simulation_title + '.DATA')
         #print ('rework ecl data tstep:', timestep)
         #rearrange the entries in the saved list
@@ -316,10 +322,14 @@ class geo_sto:
             # OPM-specific restart header workaround (.X0000 copy)
             # only needed for OPM Flow. ECLIPSE typically produces the header itself.
             if str(self.simulator).upper() == "OPM":
-                rst_file = (self.working_dir_loc + self.simulation_title_orig + "_TSTEP_" + str(
-                    timestep - 2) + ".X0000")
-                new_init_rst = (self.working_dir_loc + self.simulation_title_orig + "_TSTEP_" + str(
-                    timestep - 1) + ".X0000")
+                rst_file = os.path.join(
+                    self.working_dir_loc,
+                    f"{self.simulation_title_orig}_TSTEP_{timestep - 2}.X0000"
+                )
+                new_init_rst = os.path.join(
+                    self.working_dir_loc,
+                    f"{self.simulation_title_orig}_TSTEP_{timestep - 1}.X0000"
+                )
                 with open(rst_file, "rb") as fsrc, open(new_init_rst, "wb") as fdst:
                     fdst.write(fsrc.read())
 
@@ -498,7 +508,7 @@ class geo_sto:
         #    filename = self.working_dir_loc + self.simulation_title + '.RSM'
         #else:
         #    filename = self.working_dir_loc + self.simulation_title + '_init.RSM'
-        filename = self.working_dir_loc + self.current_simulation_title + '.RSM'
+        filename = os.path.join(self.working_dir_loc, self.current_simulation_title + '.RSM')
         results = util.getFile(filename)
         #print(results)
         #sort the rsm data to a more uniform dataset
@@ -659,16 +669,16 @@ class geo_sto:
             print(f"{'Operational mode:':30s} {current_mode}")
         else:
             print('Running storage simulation to obtain initial pressure')
-        
+
         # change unit of flowrates to kg/s from kg/d
         target_flowrate = target_flowrate / self.surface_density * 60.0 * 60.0 * 24.0
 
         self.rework_proxy_data(tstep, iter_step, target_flowrate, current_mode)
-        
+
         self.execute_proxy()
 
         proxy_results = self.get_proxy_results(current_mode)
-    
+
         self.rework_proxy_results(tstep, iter_step)
 
         if not current_mode == 'init':
@@ -681,7 +691,7 @@ class geo_sto:
         print("-" * 50)
 
         return (proxy_results[1], proxy_results[0])
-    
+
     def execute_proxy(self):
         '''
         function to call PROXY simulator executable
@@ -695,7 +705,7 @@ class geo_sto:
 
             if self.keep_ecl_logs == True:
                 log_file_path = f'{self.working_dir_loc}{self.current_simulation_title}.log'
-    
+
             else:
                 log_file_path = 'NUL'
             temp = f'{self.simulator_path}\\sAGSS.exe {simulation_path} > {log_file_path}'
@@ -731,7 +741,7 @@ class geo_sto:
             result_temp_path = f'{self.working_dir_loc}{self.old_simulation_title}.RESULT_WELLS'
 
             results = util.getFile(result_temp_path)
-            
+
             if len(results) <= 1:
                 print('Warning: there is no simulation result')
                 return [None, None]
@@ -784,7 +794,7 @@ class geo_sto:
         # find indices of relevant columns
         bhp_idx = util.getStringPositions(header, 'BHP')
         mfr_idx = util.getStringPositions(header, 'MFR')
-  
+
         # extract rate and pressure data from second line (first is unit row)
         data = [line.strip().split('\t') for line in results[2:]]
 
@@ -801,11 +811,11 @@ class geo_sto:
             flowrate_actual = flowrate_actual / 60.0 / 60.0 / 24.0
 
         return [pressure_actual, flowrate_actual]
-    
+
     def rework_proxy_results(self, timestep, iter_step):
         """
         function to rework the PROXY results file name to include the current time step and iteration step and rename the current results file
-        
+
         :param timestep: the current time step, type: int
         :param iter_step: the current iteration step, type: int
         """
@@ -820,7 +830,7 @@ class geo_sto:
 
     def execute_opm(self, tstep, iter_step):
 
-        simulation_path = self.working_dir_loc + self.current_simulation_title + ".DATA"
+        simulation_path = os.path.join(self.working_dir_loc, self.current_simulation_title + ".DATA")
 
         if self.keep_ecl_logs == True:
             log_file_path = (self.working_dir_loc + "log_" + self.current_simulation_title + "_" + str(tstep)

@@ -8,19 +8,17 @@ Created on Mon Feb 12 15:17:46 2018
 
 # %% imports
 
+import os
 import numpy as np
 import json
 import logging
 from tespy.networks import Network
-from tespy.tools import logger
+from tespy.tools.logger import logger
 from tespy.connections import Ref
 from tespy.tools.helpers import TESPyNetworkError
-from pathlib import Path
 
-logger.define_logging(
-    logfile='tespy.log',  screen_level=logging.WARNING, file_level=logging.WARNING
-)
-# %% power plant model class
+
+logger.setLevel(logging.ERROR)
 
 
 class model:
@@ -62,9 +60,9 @@ class model:
             'discharging': 'discharge'
         }
 
-        self.wdir = Path(cd.working_dir) / cd.powerplant_path
+        self.wdir = os.path.join(cd.working_dir, cd.powerplant_path)
         self.sc = cd.scenario
-        ctrl_file = self.wdir / f"{cd.scenario}.powerplant_ctrl.json"
+        ctrl_file = os.path.join(self.wdir, f"{cd.scenario}.powerplant_ctrl.json")
         with open(ctrl_file) as f:
             self.__dict__.update(json.load(f))
 
