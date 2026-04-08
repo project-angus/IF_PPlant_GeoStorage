@@ -56,8 +56,7 @@ def __main__(argv):
     if path[0] == "r":
         path = path[1:]
 
-    path_log = path[:-15]
-    path_log += ".log"
+    path_log = path.replace(".main_ctrl.json", ".log")
     #check if file exists and delete if necessary
     if os.path.isfile(path_log):
         os.remove(path_log)
@@ -76,10 +75,8 @@ def __main__(argv):
     geostorage = gs.geo_sto(cd)
 
     min_well_depth = min(geostorage.well_depths)
-    #min_well_depth = 700 #read this from file later!
 
-    powerplant = pp.model(cd, min_well_depth, len(geostorage.well_names), max(geostorage.well_upper_BHP), min(geostorage.well_lower_BHP))
-    #powerplant = pp.model(cd, min_well_depth, 9, 80, 40)
+    powerplant = pp.PowerPlantCoupling(cd, min_well_depth, len(geostorage.well_names), max(geostorage.well_upper_BHP), min(geostorage.well_lower_BHP))
 
     print("=" * 111)
     print('Reading input time series...')
@@ -100,7 +97,6 @@ def __main__(argv):
     output_ts.loc[0] = 0
     output_ts.loc[0, "time"] = current_time
 
-    #print(output_ts)
     '''debug values from here onwards'''
     #data = [0.0, 0.0]
     #data = geostorage.CallStorageSimulation(1.15741, 1, cd, 'charging')
@@ -108,7 +104,6 @@ def __main__(argv):
     #data = geostorage.CallStorageSimulation(-1.15741, 3, cd, 'discharging')
     '''end of debug values'''
 
-    p0 = 0.0 #old pressure (from last time step / iter)
     # get initial pressure before the time loop
     p0, dummy_flow = geostorage.CallStorageSimulation(0.0, -1, 0, cd, 'init')
     output_ts.loc[0,"storage_pressure"] = p0
@@ -165,10 +160,6 @@ def __main__(argv):
             output_ts.loc[t_step+1] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
                                                     p_actual])
 
-        #Logger.flush()
-
-        #sys.stdout.flush() #force flush of output
-
         #if t_step % cd.save_nth_t_step == 0:
         output_ts.to_csv(os.path.join(cd.working_dir, cd.output_timeseries_path), index=False, sep=';')
 
@@ -182,8 +173,6 @@ def __main__(argv):
     print(f"{'Scenario name:':30s} {cd.scenario}")
     print(f"{'Directory:':30s} {cd.working_dir}")
     print(f"{'Log file:':30s} {path_log}")
-    # print(f"{'Start time:':30s} {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    # print(f"{'End time:':30s} {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'Elapsed time:':30s} {str(elapsed)}")
     print("=" * 111)
     print("\n" * 3)
@@ -658,7 +647,7 @@ class coupling_data:
         """
         suffix = '.main_ctrl.json'
         base = self.path[:-len(suffix)] if self.path.endswith(suffix) else self.path
-        self.working_dir = os.path.dirname(base)
+        self.working_dir = os.path.dirname(os.path.abspath(self.path))
         self.scenario = os.path.basename(base)
 
         self.debug = bool(self.debug)

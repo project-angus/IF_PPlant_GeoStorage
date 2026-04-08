@@ -29,11 +29,6 @@ class geo_sto:
         with open(path) as f:
             self.__dict__.update(json.load(f))
 
-        #self.tespy_charge_path = wdir + self.tespy_charge_path
-        #self.tespy_discharge_path = wdir + self.tespy_discharge_path
-
-        #self.simulator = ''
-        #self.simulator_path = ''
         self.working_dir_loc = wdir
         self.keep_ecl_logs = False
 
@@ -321,7 +316,7 @@ class geo_sto:
 
             # OPM-specific restart header workaround (.X0000 copy)
             # only needed for OPM Flow. ECLIPSE typically produces the header itself.
-            if str(self.simulator).upper() == "OPM":
+            if str(self.simulator).upper() == "OPM" and timestep > 1:
                 rst_file = os.path.join(
                     self.working_dir_loc,
                     f"{self.simulation_title_orig}_TSTEP_{timestep - 2}.X0000"
@@ -394,7 +389,8 @@ class geo_sto:
             #else:
             #    #print('ini mode')
             #    temp_path = self.working_dir_loc + self.simulation_title + '_init.DATA'
-            temp_path = self.working_dir_loc + self.current_simulation_title + '.DATA'
+            # temp_path = self.working_dir_loc + self.current_simulation_title + '.DATA'
+            temp_path = os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.DATA")
             util.writeFile(temp_path, ecl_data_file)
 
 
@@ -424,39 +420,17 @@ class geo_sto:
 
         #if tstep > -1:
             #print('Attempting to delete file: *', file_ending, ' in timestep ', tstep)
-
         termination_list = [
-            self.working_dir_loc + self.old_simulation_title + file_ending_form,
-            self.working_dir_loc + self.old_simulation_title + file_ending_unform,
-            self.working_dir_loc + self.old_simulation_title + ".DBG",
-            self.working_dir_loc + self.old_simulation_title + ".dbprtx",
-            self.working_dir_loc + self.old_simulation_title + ".ECLEND",
-            self.working_dir_loc + self.old_simulation_title + ".ECLRUN",
-            self.working_dir_loc + self.old_simulation_title + ".GRID",
-            self.working_dir_loc + self.old_simulation_title + ".FGRID",
-            self.working_dir_loc + self.old_simulation_title + ".h5",
-            self.working_dir_loc + self.old_simulation_title + ".INIT",
-            self.working_dir_loc + self.old_simulation_title + ".FINIT",
-            self.working_dir_loc + self.old_simulation_title + ".INSPEC",
-            self.working_dir_loc + self.old_simulation_title + ".FINSPEC",
-            self.working_dir_loc + self.old_simulation_title + ".LOG",
-            self.working_dir_loc + self.old_simulation_title + ".MSG",
-            self.working_dir_loc + self.old_simulation_title + ".RSSPEC",
-            self.working_dir_loc + self.old_simulation_title + ".FRSSPEC",
-            self.working_dir_loc + self.old_simulation_title + ".SMSPEC",
-            self.working_dir_loc + self.old_simulation_title + ".FSMSPEC",
-            self.working_dir_loc + self.old_simulation_title + ".UNSMRY",
-            self.working_dir_loc + self.old_simulation_title + ".FUNSMRY",
-            self.working_dir_loc + self.old_simulation_title + ".PRTX",
-            self.working_dir_loc + self.old_simulation_title + ".RTEMSG",
-            self.working_dir_loc + self.old_simulation_title + ".default",
-            self.working_dir_loc + self.old_simulation_title + ".session",
-            self.working_dir_loc + self.old_simulation_title + ".sessionlock",
+            ".DBG", ".dbprtx", ".ECLEND", ".ECLRUN", ".GRID", ".EGRID", ".FGRID",
+            ".h5", ".INIT", ".FINIT", ".INSPEC", ".FINSPEC", ".LOG", ".MSG",
+            ".RSSPEC", ".FRSSPEC", ".SMSPEC", ".FSMSPEC", ".UNSMRY", ".FUNSMRY",
+            ".PRTX", ".RTEMSG",".RTELOG",".CFE", ".default", ".session", ".sessionlock"
         ]
-        for entry in termination_list:
-            #print('Deleting: ', entry)
-            util.deleteFile(entry)
 
+        for filename in os.listdir(self.working_dir_loc):
+            if any(filename.endswith(ext) for ext in termination_list):
+                file_path = os.path.join(self.working_dir_loc, filename)
+                util.deleteFile(file_path)
 
     def ExecuteECLIPSE(self, tstep, iter_step, op_mode):
         '''
@@ -472,25 +446,16 @@ class geo_sto:
         #import os
 
         if os.name == 'nt':
-            simulation_path = ''
-            simulation_path = self.working_dir_loc  + self.current_simulation_title + '.DATA'
-            #if not op_mode == 'init':
-            #    simulation_path = self.working_dir_loc  + self.current_simulation_title + '.DATA'
-            #else:
-            #    simulation_path = self.working_dir_loc  + self.simulation_title + '_init.DATA'
+            simulation_path = os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.DATA")
 
             if self.keep_ecl_logs == True:
-                log_file_path = self.working_dir_loc + 'log_' + self.current_simulation_title + '_' + str(tstep) + '_' + str(iter_step) + '.txt'
+                log_file_path = os.path.join(self.working_dir_loc,
+                                                 f"log_{self.current_simulation_title}_{tstep}_{iter_step}.txt")
+
             else:
                 log_file_path = 'NUL'
             temp = 'eclrun ' + self.simulator + ' ' + simulation_path + ' >' + log_file_path
             os.system(temp)
-        #elif os.name == 'posix': #Firdovsi can do this
-            #log_output_loc += ' &'
-            #rc = subprocess.call(['eclrun', simulator_loc, simulation_title_loc, '>', log_output_loc])
-
-        #print(rc)
-
 
     def GetECLResults(self, timestep, current_op_mode):
         '''
@@ -701,10 +666,12 @@ class geo_sto:
 
         if os.name == 'nt':
             # simulation_path = ''
-            simulation_path = self.working_dir_loc + self.simulation_title_orig #proxy simulator uses only one unique name
+            simulation_path = os.path.join(self.working_dir_loc,
+                                           self.simulation_title_orig)  # proxy simulator uses only one unique name
 
             if self.keep_ecl_logs == True:
-                log_file_path = f'{self.working_dir_loc}{self.current_simulation_title}.log'
+                if self.keep_ecl_logs == True:
+                    log_file_path = os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.log")
 
             else:
                 log_file_path = 'NUL'
@@ -723,7 +690,7 @@ class geo_sto:
         '''
         # open and read eclipse data file
 
-        schedule_path = f'{self.working_dir_loc}{self.simulation_title_orig}.schedule'
+        schedule_path = os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.schedule")
         schedule_file = util.getFile(schedule_path)
         flowrate_pos = util.searchSection(schedule_file, ' $CURVE') + 1
 
@@ -733,12 +700,12 @@ class geo_sto:
         # update reservoir pressure
         if  timestep >= 1 and iter_step == 0: #maybe iter_step == 0 is enough
 
-            resprop_path = f'{self.working_dir_loc}{self.simulation_title_orig}.res_prop'
+            resprop_path = os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.res_prop")
             resprop_file = util.getFile(resprop_path)
             pressure_pos = util.searchSection(resprop_file, ' $INITIAL_PRESSURE') + 1
 
             # retrieve the previous flow rate and mass volume using the results from the current simulation
-            result_temp_path = f'{self.working_dir_loc}{self.old_simulation_title}.RESULT_WELLS'
+            result_temp_path = os.path.join(self.working_dir_loc, f"{self.old_simulation_title}.RESULT_WELLS")
 
             results = util.getFile(result_temp_path)
 
@@ -781,7 +748,7 @@ class geo_sto:
         :param current_op_mode: operational mode, either 'charging', 'discharging' or 'shut-in', type: str
         :returns: returns a tuple of float values containing pressure and actual storage flow rate
         '''
-        file_path = f'{self.working_dir_loc}{self.simulation_title_orig}.RESULT_WELLS'
+        file_path = os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.RESULT_WELLS")
         results = util.getFile(file_path)
 
         if len(results) <= 1:
@@ -821,20 +788,21 @@ class geo_sto:
         """
         # define the new file name
         if timestep < 0:
-            new_filename = f'{self.working_dir_loc}{self.simulation_title_orig}_TSTEP_{timestep}_{iter_step}.RESULT_WELLS'
+            new_filename = os.path.join(self.working_dir_loc,
+                                        f"{self.simulation_title_orig}_TSTEP_{timestep}_{iter_step}.RESULT_WELLS")
         else:
-            new_filename = f'{self.working_dir_loc}{self.current_simulation_title}.RESULT_WELLS'
+            new_filename = os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.RESULT_WELLS")
 
         # rename the current results file
-        os.rename(f'{self.working_dir_loc}{self.simulation_title_orig}.RESULT_WELLS', new_filename)
+        old_filename = os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.RESULT_WELLS")
+        os.rename(old_filename, new_filename)
 
     def execute_opm(self, tstep, iter_step):
 
         simulation_path = os.path.join(self.working_dir_loc, self.current_simulation_title + ".DATA")
 
         if self.keep_ecl_logs == True:
-            log_file_path = (self.working_dir_loc + "log_" + self.current_simulation_title + "_" + str(tstep)
-                            + "_"  + str(iter_step)+ ".txt" )
+            log_file_path = os.path.join(self.working_dir_loc, f"log_{self.current_simulation_title}_{tstep}_{iter_step}.txt")
         else:
             log_file_path = None
 
