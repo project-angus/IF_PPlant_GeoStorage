@@ -170,7 +170,7 @@ def __main__(argv):
         #sys.stdout.flush() #force flush of output
 
         #if t_step % cd.save_nth_t_step == 0:
-        output_ts.to_csv(cd.working_dir + cd.output_timeseries_path, index=False, sep=';')
+        output_ts.to_csv(os.path.join(cd.working_dir, cd.output_timeseries_path), index=False, sep=';')
 
         #save old power target
         power_target_t0 = power_target
