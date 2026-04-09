@@ -52,13 +52,9 @@ class PowerPlantCoupling:
     the geological storage model control file.
     """
 
-    def __init__(self, cd, min_well_depth, num_wells, p_max, p_min):
+    _MODE_MAP = {'charging': 'charge', 'discharging': 'discharge'}
 
-        # required for attribute lookup (due to bad naming in powerplant module)
-        self.mode_lookup = {
-            'charging': 'charge',
-            'discharging': 'discharge'
-        }
+    def __init__(self, cd, min_well_depth, num_wells, p_max, p_min):
 
         self.wdir = os.path.join(cd.working_dir, cd.powerplant_path)
         self.sc = cd.scenario
@@ -76,8 +72,6 @@ class PowerPlantCoupling:
         self.p_min = p_min
 
         self.load_tespy_models()
-        self.p_max = p_max
-        self.p_min = p_min
 
     def load_tespy_models(self):
 
@@ -154,18 +148,18 @@ class PowerPlantCoupling:
     def _check_pressure_limits(self, pressure, mode):
         if pressure + 1e-4 < self.p_min and mode == 'discharge':
             msg = (
-                'Pressure is below minimum pressure: min=' + str(self.p_min) +
-                ', value=' + str(pressure) + '.'
+                f"Pressure is below minimum pressure: min={self.p_min}, "
+                f"actual value={pressure}."
             )
             logging.error(msg)
             return False
         elif pressure - 1e-4 > self.p_max and mode == 'charge':
             msg = (
-                'Pressure is above maximum pressure: max=' + str(self.p_max) +
-                ', value=' + str(pressure) + '.'
+                f"Pressure is above maximum pressure: max={self.p_max}"
+                f", actual value={pressure}."
             )
             logging.error(msg)
-            return 0, 0, 0
+            return False
 
         return True
 
@@ -194,6 +188,8 @@ class PowerPlantCoupling:
             Actual electrical power input/output of the power plant.
             Differs from scheduled power, if schedule can not be met.
         """
+        mode = self._MODE_MAP.get(mode, mode)
+
         if mode == 'shut-in':
             return 0, 0, 0
 
@@ -205,6 +201,7 @@ class PowerPlantCoupling:
         else:
             model = self.discharge_model
 
+        power = abs(power / 1e6)
         specification = {
             "power": power,
             "well_pressure": pressure,
@@ -213,7 +210,10 @@ class PowerPlantCoupling:
         result = model.solve_model_offdesign_with_stepping(**specification)
         if result:
             if abs(power) < abs(model.power_nominal / 100):
-                msg = (f"Target power ({power / 1e6:.2f} MW) is below minimum stable part-load limit")
+                msg = (
+                    f"Target power ({power:.2f} MW) is below minimum stable "
+                    "part-load limit"
+                )
                 print(msg)
                 logging.warning(msg)
                 return 0, 0, 0
@@ -230,8 +230,10 @@ class PowerPlantCoupling:
                 )
 
         else:
-            model.nw.print_results()
-            msg = f"No solution could be found for input pair {power = }, {pressure = }."
+            msg = (
+                f"No solution could be found for input pair {power = }, "
+                f"{pressure = }."
+            )
             print(msg)
             logging.warning(msg)
             return 0, 0, 0
@@ -257,8 +259,8 @@ class PowerPlantCoupling:
             return self.get_power(massflow_max, pressure, mode)
         else:
             msg = (
-                'Calculation successful for power=' + str(power) +
-                ' pressure=' + str(pressure) + '. Mass flow=' + str(massflow) + '.'
+                f"Calculation successful for {power = }, {pressure = }: "
+                f"{massflow = }."
             )
             print(msg)
             # logging.debug(msg)
@@ -287,6 +289,8 @@ class PowerPlantCoupling:
         power : float
             Actual electrical power input/output of the power plant.
         """
+        mode = self._MODE_MAP.get(mode, mode)
+
         if mode == 'shut-in':
             return 0, 0, 0
 
@@ -302,16 +306,16 @@ class PowerPlantCoupling:
 
         if mass_flow < mass_flow_min - 1e-4:
             msg = (
-                'Mass flow is below minimum mass flow, shutting down power ' +
-                'plant.'
+                "Mass flow is below minimum mass flow, shutting down power "
+                "plant."
             )
             print(msg)
             logging.error(msg)
             return 0, 0, 0
         elif mass_flow > mass_flow_max + 1e-4:
             msg = (
-                f"Mass flow {mass_flow} above maximum mass flow. Adjusting mass flow "
-                f"to maximum allowed mass flow of {mass_flow_max}."
+                f"Mass flow {mass_flow} above maximum mass flow. Adjusting "
+                f"mass flow to maximum allowed mass flow of {mass_flow_max}."
             )
             print(msg)
             logging.warning(msg)

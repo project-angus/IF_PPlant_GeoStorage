@@ -1,8 +1,8 @@
 from tespy.tools.helpers import merge_dicts
 from tespy.connections import Ref
 from tespy.networks import Network
-import json
 import os
+import numpy as np
 
 
 class ModelTemplate():
@@ -20,10 +20,6 @@ class ModelTemplate():
     def _create_network(self) -> None:
         self.nw = Network()
         self.nw.units.set_defaults(**self.config["units"])
-
-    def _load_parameter_lookup(self, parameter_lookup) -> dict:
-        with open(parameter_lookup, "r", encoding="utf-8") as f:
-            return json.load(f)
 
     def _map_parameter(self, parameter: str) -> tuple:
         return self.parameter_lookup[parameter]
@@ -72,7 +68,7 @@ class ModelTemplate():
         if "Customs" in input_dict:
             self._set_customs(input_dict["Customs"])
 
-    def _set_customs(self):
+    def _set_customs(self, specifications):
         pass
 
     def save_design_state(self):
@@ -139,7 +135,6 @@ class PowerPlant(ModelTemplate):
                 current_values[key] = self.get_parameter(key)
                 self.set_parameters(**{key: current_values[key]})
 
-        import numpy as np
         steps = {}
         for key, value in current_values.items():
             if key == "well_pressure":
