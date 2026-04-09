@@ -177,6 +177,10 @@ def __main__(argv):
     print("=" * 111)
     print("\n" * 3)
 
+    if isinstance(sys.stdout, Logger):
+        sys.stdout.log.close()
+        sys.stdout = sys.stdout.terminal
+
     # Load balancing for mismatched mass flow to restore initial storage level
     '''
     if cd.balance_mass_eos:
@@ -673,4 +677,5 @@ class Logger(object):
         #you might want to specify some extra behavior here.
         pass
 
-__main__(sys.argv[1:])
+if __name__ == '__main__':
+    __main__(sys.argv[1:])
