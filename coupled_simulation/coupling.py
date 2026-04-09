@@ -3,7 +3,7 @@
 """
 Created on Mon Feb 12 15:17:46 2018
 
-__author__ = "witte, wtp"
+__author__ = "witte, wtp, fgasa"
 
 """
 
@@ -388,14 +388,14 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
                 #m = m_corr
 
             if storage_mode == 'charging':
-                if m < powerplant.m_max_charge and p1 < p0_temp:
+                if m < powerplant.charge_model.dot_m_max and p1 < p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
                     print ('updating target mass output during charging to time step target')
                     m = m_corr
             elif storage_mode == 'discharging':
-                if m < powerplant.m_max_discharge and p1 > p0_temp:
+                if m < powerplant.discharge_model.dot_m_max and p1 > p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
@@ -571,14 +571,14 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
                 #m = m_corr
 
             if storage_mode == 'charging':
-                if m < powerplant.m_max_charge and p1 < p0_temp:
+                if m < powerplant.charge_model.dot_m_max and p1 < p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
                     print ('updating target power output during charging to time step target')
                     power = power_corr
             elif storage_mode == 'discharging':
-                if m < powerplant.m_max_discharge and p1 > p0_temp:
+                if m < powerplant.discharge_model.dot_m_max and p1 > p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
