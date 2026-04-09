@@ -201,15 +201,19 @@ class PowerPlantCoupling:
         else:
             model = self.discharge_model
 
+        power = abs(power / 1e6)
         specification = {
-            "power": abs(power / 1e6),
+            "power": power,
             "well_pressure": pressure,
             "powerplant_mass_flow": None  # unset the mass flow specification
         }
         result = model.solve_model_offdesign_with_stepping(**specification)
         if result:
             if abs(power) < abs(model.power_nominal / 100):
-                msg = (f"Target power ({power / 1e6:.2f} MW) is below minimum stable part-load limit")
+                msg = (
+                    f"Target power ({power:.2f} MW) is below minimum stable "
+                    "part-load limit"
+                )
                 print(msg)
                 logging.warning(msg)
                 return 0, 0, 0
@@ -302,16 +306,16 @@ class PowerPlantCoupling:
 
         if mass_flow < mass_flow_min - 1e-4:
             msg = (
-                'Mass flow is below minimum mass flow, shutting down power ' +
-                'plant.'
+                "Mass flow is below minimum mass flow, shutting down power "
+                "plant."
             )
             print(msg)
             logging.error(msg)
             return 0, 0, 0
         elif mass_flow > mass_flow_max + 1e-4:
             msg = (
-                f"Mass flow {mass_flow} above maximum mass flow. Adjusting mass flow "
-                f"to maximum allowed mass flow of {mass_flow_max}."
+                f"Mass flow {mass_flow} above maximum mass flow. Adjusting "
+                f"mass flow to maximum allowed mass flow of {mass_flow_max}."
             )
             print(msg)
             logging.warning(msg)
