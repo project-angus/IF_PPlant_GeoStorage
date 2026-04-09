@@ -21,10 +21,6 @@ class ModelTemplate():
         self.nw = Network()
         self.nw.units.set_defaults(**self.config["units"])
 
-    def _load_parameter_lookup(self, parameter_lookup) -> dict:
-        with open(parameter_lookup, "r", encoding="utf-8") as f:
-            return json.load(f)
-
     def _map_parameter(self, parameter: str) -> tuple:
         return self.parameter_lookup[parameter]
 
