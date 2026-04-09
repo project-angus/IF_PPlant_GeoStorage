@@ -121,10 +121,10 @@ def __main__(argv):
         current_time = datetime.timedelta(seconds=t_step * cd.t_step_length) + cd.t_start
 
         try:
-            power_target = input_ts.loc[current_time].power * 1e6
+            power_target = input_ts.loc[current_time].power
             last_time = current_time
         except KeyError:
-            power_target = input_ts.loc[last_time].power * 1e6
+            power_target = input_ts.loc[last_time].power
 
         print("=" * 111)
 

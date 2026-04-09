@@ -201,7 +201,7 @@ class PowerPlantCoupling:
         else:
             model = self.discharge_model
 
-        power = abs(power / 1e6)
+        power = abs(power)
         specification = {
             "power": power,
             "well_pressure": pressure,
@@ -230,10 +230,7 @@ class PowerPlantCoupling:
                 )
 
         else:
-            msg = (
-                f"No solution could be found for input pair {power = }, "
-                f"{pressure = }."
-            )
+            msg = (f"{'No solution found for Power / Pressure:':45s} {'%.3f' % power} / {'%.3f' % pressure}")
             print(msg)
             logging.warning(msg)
             return 0, 0, 0
