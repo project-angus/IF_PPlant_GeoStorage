@@ -3,7 +3,7 @@
 """
 Created on Mon Feb 12 15:17:46 2018
 
-__author__ = "witte, wtp"
+__author__ = "witte, wtp, fgasa"
 
 """
 
@@ -16,7 +16,7 @@ import json
 import datetime
 import os
 
-def __main__(argv):
+def main(argv):
     """
     main function to initialise the calculation
 
@@ -56,8 +56,7 @@ def __main__(argv):
     if path[0] == "r":
         path = path[1:]
 
-    path_log = path[:-15]
-    path_log += ".log"
+    path_log = path.replace(".main_ctrl.json", ".log")
     #check if file exists and delete if necessary
     if os.path.isfile(path_log):
         os.remove(path_log)
@@ -70,16 +69,14 @@ def __main__(argv):
     print("=" * 111)
     print('Assembling model data...')
 
-    cd = coupling_data(path=path)
+    cd = CouplingData(path=path)
 
     # create instances for power plant and storage
-    geostorage = gs.geo_sto(cd)
+    geostorage = gs.GeoStorage(cd)
 
     min_well_depth = min(geostorage.well_depths)
-    #min_well_depth = 700 #read this from file later!
 
-    powerplant = pp.model(cd, min_well_depth, len(geostorage.well_names), max(geostorage.well_upper_BHP), min(geostorage.well_lower_BHP))
-    #powerplant = pp.model(cd, min_well_depth, 9, 80, 40)
+    powerplant = pp.PowerPlantCoupling(cd, min_well_depth, len(geostorage.well_names), max(geostorage.well_upper_BHP), min(geostorage.well_lower_BHP))
 
     print("=" * 111)
     print('Reading input time series...')
@@ -100,17 +97,15 @@ def __main__(argv):
     output_ts.loc[0] = 0
     output_ts.loc[0, "time"] = current_time
 
-    #print(output_ts)
     '''debug values from here onwards'''
     #data = [0.0, 0.0]
-    #data = geostorage.CallStorageSimulation(1.15741, 1, cd, 'charging')
-    #data = geostorage.CallStorageSimulation(0.0, 2, cd, 'shut-in')
-    #data = geostorage.CallStorageSimulation(-1.15741, 3, cd, 'discharging')
+    #data = geostorage.call_storage_simulation(1.15741, 1, cd, 'charging')
+    #data = geostorage.call_storage_simulation(0.0, 2, cd, 'shut-in')
+    #data = geostorage.call_storage_simulation(-1.15741, 3, cd, 'discharging')
     '''end of debug values'''
 
-    p0 = 0.0 #old pressure (from last time step / iter)
     # get initial pressure before the time loop
-    p0, dummy_flow = geostorage.CallStorageSimulation(0.0, -1, 0, cd, 'init')
+    p0, dummy_flow = geostorage.call_storage_simulation(0.0, -1, 0, cd, 'init')
     output_ts.loc[0,"storage_pressure"] = p0
     print('Simulation initialzation completed.')
     print("=" * 111)
@@ -126,10 +121,10 @@ def __main__(argv):
         current_time = datetime.timedelta(seconds=t_step * cd.t_step_length) + cd.t_start
 
         try:
-            power_target = input_ts.loc[current_time].power * 1e6
+            power_target = input_ts.loc[current_time].power
             last_time = current_time
         except KeyError:
-            power_target = input_ts.loc[last_time].power * 1e6
+            power_target = input_ts.loc[last_time].power
 
         print("=" * 111)
 
@@ -152,7 +147,7 @@ def __main__(argv):
         # save last pressure (p1) for next time step as p0
         p0 = p_actual
         #deleting old files
-        geostorage.deleteSimFiles(t_step)
+        geostorage.delete_sim_files(t_step)
 
         # write pressure, mass flow and power to .csv
         if cd.auto_eval_output == True:
@@ -164,10 +159,6 @@ def __main__(argv):
         else:
             output_ts.loc[t_step+1] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
                                                     p_actual])
-
-        #Logger.flush()
-
-        #sys.stdout.flush() #force flush of output
 
         #if t_step % cd.save_nth_t_step == 0:
         output_ts.to_csv(os.path.join(cd.working_dir, cd.output_timeseries_path), index=False, sep=';')
@@ -182,11 +173,13 @@ def __main__(argv):
     print(f"{'Scenario name:':30s} {cd.scenario}")
     print(f"{'Directory:':30s} {cd.working_dir}")
     print(f"{'Log file:':30s} {path_log}")
-    # print(f"{'Start time:':30s} {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    # print(f"{'End time:':30s} {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'Elapsed time:':30s} {str(elapsed)}")
     print("=" * 111)
     print("\n" * 3)
+
+    if isinstance(sys.stdout, Logger):
+        sys.stdout.log.close()
+        sys.stdout = sys.stdout.terminal
 
     # Load balancing for mismatched mass flow to restore initial storage level
     '''
@@ -233,7 +226,7 @@ def __main__(argv):
             # save last pressure (p1) for next time step as p0
             p0 = p_actual
             #deleting old files
-            geostorage.deleteSimFiles(t_step)
+            geostorage.delete_sim_files(t_step)
 
             # write pressure, mass flow and power to .csv
             if cd.auto_eval_output == True:
@@ -328,7 +321,7 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
         print("-" * 50)
 
         #get pressure for the given target rate and the actually achieved flow rate from storage simulation
-        p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode)
+        p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode)
 
         #evalute pressure difference
         delta_p_iter = abs(p1 - p0_temp)
@@ -389,7 +382,7 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
                 else:
                     tstep_accepted = True
                     #update storage pressure, required as tstep is accepted and loop is terminated
-                    #p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode )
+                    #p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode )
                 sys.stdout.flush()
 
             else:
@@ -399,14 +392,14 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
                 #m = m_corr
 
             if storage_mode == 'charging':
-                if m < powerplant.m_max_charge and p1 < p0_temp:
+                if m < powerplant.charge_model.dot_m_max and p1 < p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
                     print ('updating target mass output during charging to time step target')
                     m = m_corr
             elif storage_mode == 'discharging':
-                if m < powerplant.m_max_discharge and p1 > p0_temp:
+                if m < powerplant.discharge_model.dot_m_max and p1 > p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
@@ -511,7 +504,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
         print("-" * 50)
 
         #get pressure for the given target rate and the actually achieved flow rate from storage simulation
-        p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode )
+        p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode )
 
         #evalute pressure difference
         delta_p_iter = abs(p1 - p0_temp)
@@ -572,7 +565,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
                 else:
                     tstep_accepted = True
                     #update storage pressure, required as tstep is accepted and loop is terminated
-                    #p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode )
+                    #p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode )
                 sys.stdout.flush()
 
             else:
@@ -582,14 +575,14 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
                 #m = m_corr
 
             if storage_mode == 'charging':
-                if m < powerplant.m_max_charge and p1 < p0_temp:
+                if m < powerplant.charge_model.dot_m_max and p1 < p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
                     print ('updating target power output during charging to time step target')
                     power = power_corr
             elif storage_mode == 'discharging':
-                if m < powerplant.m_max_discharge and p1 > p0_temp:
+                if m < powerplant.discharge_model.dot_m_max and p1 > p0_temp:
                     print ('current target mass flow is: ', '%.6f'%m, '[kg/s]')
                     print ('current pressure is: ', '%.6f'%p1, '[bar]')
                     print ('last pressure was: ', '%.6f'%p0_temp, '[bar]')
@@ -627,7 +620,7 @@ def read_series(path):
 
     return ts
 
-class coupling_data:
+class CouplingData:
     """
     creates a data container with the main model parameters
 
@@ -658,7 +651,7 @@ class coupling_data:
         """
         suffix = '.main_ctrl.json'
         base = self.path[:-len(suffix)] if self.path.endswith(suffix) else self.path
-        self.working_dir = os.path.dirname(base)
+        self.working_dir = os.path.dirname(os.path.abspath(self.path))
         self.scenario = os.path.basename(base)
 
         self.debug = bool(self.debug)
@@ -684,4 +677,5 @@ class Logger(object):
         #you might want to specify some extra behavior here.
         pass
 
-__main__(sys.argv[1:])
+if __name__ == '__main__':
+    main(sys.argv[1:])
