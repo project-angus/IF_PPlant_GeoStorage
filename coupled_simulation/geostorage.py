@@ -13,10 +13,15 @@ import os
 import re
 import subprocess
 
-class geo_sto:
+class GeoStorage:
 
     '''
-    class to include geologic storage simulations
+    Class to include geologic storage simulations.
+
+    Translates target mass flow commands into simulator-specific inputs, executes
+    the simulation for a single timestep, and extracts the resulting reservoir state.
+
+    Returns: tuple: (pressure_actual, flowrate_actual) as standardized floats.
 
     '''
     def __init__(self, cd):
@@ -42,8 +47,7 @@ class geo_sto:
         else:
             self.keep_ecl_logs = False
 
-
-    def CallStorageSimulation(self, target_flow, tstep, iter_step, coupling_data, op_mode):
+    def call_storage_simulation(self, target_flow, tstep, iter_step, coupling_data, op_mode):
         '''
         Entry point for geo-storage simulation, handles all data transfer, executes simulator
         and provides simulation results to power plant simulator
@@ -60,19 +64,18 @@ class geo_sto:
         '''
         #this is the entry point for the geostorage coupling
 
-        if(self.simulator == 'ECLIPSE' or self.simulator == 'e300'):
-            flowrate, pressure = self.RunSimulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
+        if self.simulator in ['ECLIPSE', 'e300']:
+            flowrate, pressure = self.run_simulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
         elif self.simulator == 'PROXY':
             flowrate, pressure = self.run_proxy(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
         elif self.simulator == 'OPM':
-            flowrate, pressure = self.RunSimulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
+            flowrate, pressure = self.run_simulator(target_flow, tstep, iter_step, coupling_data.t_step_length, op_mode)
         else:
             print('ERROR: simulator flag not understood. Is: ', self.simulator)
 
         return pressure, flowrate
 
-
-    def RunSimulator(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
+    def run_simulator(self, target_flowrate, tstep, iter_step, tstepsize, current_mode):
         '''
         Function acting as a wrapper for using eclipse (SChlumberger) as a storage simulator
 
@@ -122,14 +125,14 @@ class geo_sto:
         target_flowrate = target_flowrate / self.surface_density
 
         # assembling current ecl data file
-        self.reworkECLData(tstep, tstepsize, target_flowrate, current_mode)
+        self.rework_ecl_data(tstep, tstepsize, target_flowrate, current_mode)
         # executing reservoir simulator
         if str(self.simulator).upper().startswith("OPM"):
             self.execute_opm(tstep, iter_step)
         else:
-            self.ExecuteECLIPSE(tstep, iter_step, current_mode)
+            self.execute_ecl(tstep, iter_step, current_mode)
         # reading results
-        ecl_results = self.GetECLResults(tstep, current_mode)
+        ecl_results = self.get_ecl_results(tstep, current_mode)
 
         #adjusting to mass flow rates
         ecl_results[1] = ecl_results[1] * self.surface_density
@@ -144,8 +147,7 @@ class geo_sto:
         print("-" * 50)
         return (ecl_results[1], ecl_results[0])
 
-
-    def rearrangeRSMDataArray(self, rsm_list):
+    def rearrange_rsm_data_array(self, rsm_list):
         '''
         Function to sort through Eclipse's RSM file and obtain well data from last timestep
 
@@ -187,7 +189,7 @@ class geo_sto:
 
         return output
 
-    def rearrangeRSMDataArray_OPM(self, rsm_lines):
+    def rearrange_rsm_data_array_opm(self, rsm_lines):
         """
         Function to parse OPM  .RSM output with multiple 'SUMMARY OF RUN' blocks per timestep.
         Return two strings (header_line, data_line) separated by tabs so downstream
@@ -269,8 +271,7 @@ class geo_sto:
         data_line = date_value + '\t' + '\t'.join(combined_data)
         return [header_line + '\n', data_line + '\n']
 
-
-    def reworkECLData(self, timestep, timestepsize, flowrate, op_mode):
+    def rework_ecl_data(self, timestep, timestepsize, flowrate, op_mode):
         '''
         function to change settings in the eclipse input file required for the storage simulation
 
@@ -393,8 +394,7 @@ class geo_sto:
             temp_path = os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.DATA")
             util.writeFile(temp_path, ecl_data_file)
 
-
-    def deleteSimFiles(self, tstep):
+    def delete_sim_files(self, tstep):
 
         file_ending_unform = ".X"
         file_ending_form = ".F"
@@ -432,7 +432,7 @@ class geo_sto:
                 file_path = os.path.join(self.working_dir_loc, filename)
                 util.deleteFile(file_path)
 
-    def ExecuteECLIPSE(self, tstep, iter_step, op_mode):
+    def execute_ecl(self, tstep, iter_step, op_mode):
         '''
         Function to call eclipse executable
 
@@ -457,7 +457,7 @@ class geo_sto:
             temp = 'eclrun ' + self.simulator + ' ' + simulation_path + ' >' + log_file_path
             os.system(temp)
 
-    def GetECLResults(self, timestep, current_op_mode):
+    def get_ecl_results(self, timestep, current_op_mode):
         '''
         Function to get the eclipse results from the *.RSM file and analyze the results
 
@@ -479,10 +479,10 @@ class geo_sto:
         #sort the rsm data to a more uniform dataset
         # reorderd_rsm_data = self.rearrangeRSMDataArray(results)
         if self.simulator == 'e300' or self.simulator == 'ECLIPSE':
-            reorderd_rsm_data = self.rearrangeRSMDataArray(results)
+            reorderd_rsm_data = self.rearrange_rsm_data_array(results)
 
         elif self.simulator == 'OPM':
-            reorderd_rsm_data = self.rearrangeRSMDataArray_OPM(results)
+            reorderd_rsm_data = self.rearrange_rsm_data_array_opm(results)
 
         well_results = util.contractDataArray(reorderd_rsm_data)
 
@@ -521,7 +521,7 @@ class geo_sto:
             well_names.append(well_results[2][i])
             if well_pressures[-1] == 0.0:
                 print('Problem: well pressure for well ', well_names[-1], ' is zero. Setting to corresponding BHP limit' )
-                bhp_limits_well = self.getWellBHPLimits(well_names[-1])
+                bhp_limits_well = self.get_well_bhp_limits(well_names[-1])
                 if current_op_mode == 'discharging':
                     well_pressures[-1] = bhp_limits_well[0]
                 elif current_op_mode == 'charging' or current_op_mode == 'shut-in':
@@ -592,7 +592,7 @@ class geo_sto:
 
         return [pressure_actual, flowrate_actual]
 
-    def getWellBHPLimits(self, well_name):
+    def get_well_bhp_limits(self, well_name):
         '''
         function to obtain pressure limits for a given well
         :param well_name: well identifier used to search well list
@@ -812,7 +812,7 @@ class geo_sto:
             drive = simulation_path_wsl[0].lower()
             simulation_path_wsl = f"/mnt/{drive}/{simulation_path_wsl[3:]}"
 
-            run_cmd = f"{self.simulator_path} {simulation_path_wsl} --enable-opm-rst-file=True"
+            run_cmd = f"{self.simulator_path} {simulation_path_wsl} --enable-opm-rst-file=true --parsing-strictness=low"
 
             if log_file_path is not None:
                 log_file_path_wsl = log_file_path.replace("\\", "/")

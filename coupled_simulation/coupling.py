@@ -16,7 +16,7 @@ import json
 import datetime
 import os
 
-def __main__(argv):
+def main(argv):
     """
     main function to initialise the calculation
 
@@ -69,10 +69,10 @@ def __main__(argv):
     print("=" * 111)
     print('Assembling model data...')
 
-    cd = coupling_data(path=path)
+    cd = CouplingData(path=path)
 
     # create instances for power plant and storage
-    geostorage = gs.geo_sto(cd)
+    geostorage = gs.GeoStorage(cd)
 
     min_well_depth = min(geostorage.well_depths)
 
@@ -99,13 +99,13 @@ def __main__(argv):
 
     '''debug values from here onwards'''
     #data = [0.0, 0.0]
-    #data = geostorage.CallStorageSimulation(1.15741, 1, cd, 'charging')
-    #data = geostorage.CallStorageSimulation(0.0, 2, cd, 'shut-in')
-    #data = geostorage.CallStorageSimulation(-1.15741, 3, cd, 'discharging')
+    #data = geostorage.call_storage_simulation(1.15741, 1, cd, 'charging')
+    #data = geostorage.call_storage_simulation(0.0, 2, cd, 'shut-in')
+    #data = geostorage.call_storage_simulation(-1.15741, 3, cd, 'discharging')
     '''end of debug values'''
 
     # get initial pressure before the time loop
-    p0, dummy_flow = geostorage.CallStorageSimulation(0.0, -1, 0, cd, 'init')
+    p0, dummy_flow = geostorage.call_storage_simulation(0.0, -1, 0, cd, 'init')
     output_ts.loc[0,"storage_pressure"] = p0
     print('Simulation initialzation completed.')
     print("=" * 111)
@@ -147,7 +147,7 @@ def __main__(argv):
         # save last pressure (p1) for next time step as p0
         p0 = p_actual
         #deleting old files
-        geostorage.deleteSimFiles(t_step)
+        geostorage.delete_sim_files(t_step)
 
         # write pressure, mass flow and power to .csv
         if cd.auto_eval_output == True:
@@ -226,7 +226,7 @@ def __main__(argv):
             # save last pressure (p1) for next time step as p0
             p0 = p_actual
             #deleting old files
-            geostorage.deleteSimFiles(t_step)
+            geostorage.delete_sim_files(t_step)
 
             # write pressure, mass flow and power to .csv
             if cd.auto_eval_output == True:
@@ -321,7 +321,7 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
         print("-" * 50)
 
         #get pressure for the given target rate and the actually achieved flow rate from storage simulation
-        p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode)
+        p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode)
 
         #evalute pressure difference
         delta_p_iter = abs(p1 - p0_temp)
@@ -382,7 +382,7 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
                 else:
                     tstep_accepted = True
                     #update storage pressure, required as tstep is accepted and loop is terminated
-                    #p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode )
+                    #p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode )
                 sys.stdout.flush()
 
             else:
@@ -504,7 +504,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
         print("-" * 50)
 
         #get pressure for the given target rate and the actually achieved flow rate from storage simulation
-        p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode )
+        p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode )
 
         #evalute pressure difference
         delta_p_iter = abs(p1 - p0_temp)
@@ -565,7 +565,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
                 else:
                     tstep_accepted = True
                     #update storage pressure, required as tstep is accepted and loop is terminated
-                    #p1, m_corr = geostorage.CallStorageSimulation(m, tstep, iter_step, md, storage_mode )
+                    #p1, m_corr = geostorage.call_storage_simulation(m, tstep, iter_step, md, storage_mode )
                 sys.stdout.flush()
 
             else:
@@ -620,7 +620,7 @@ def read_series(path):
 
     return ts
 
-class coupling_data:
+class CouplingData:
     """
     creates a data container with the main model parameters
 
@@ -678,4 +678,4 @@ class Logger(object):
         pass
 
 if __name__ == '__main__':
-    __main__(sys.argv[1:])
+    main(sys.argv[1:])

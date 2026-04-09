@@ -12,4 +12,4 @@ import sys
 from coupled_simulation import cp
 
 print (sys.argv)
-cp.__main__(sys.argv[1:])
+cp.main(sys.argv[1:])
