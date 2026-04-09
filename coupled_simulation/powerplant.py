@@ -52,13 +52,9 @@ class PowerPlantCoupling:
     the geological storage model control file.
     """
 
-    def __init__(self, cd, min_well_depth, num_wells, p_max, p_min):
+    _MODE_MAP = {'charging': 'charge', 'discharging': 'discharge'}
 
-        # required for attribute lookup (due to bad naming in powerplant module)
-        self.mode_lookup = {
-            'charging': 'charge',
-            'discharging': 'discharge'
-        }
+    def __init__(self, cd, min_well_depth, num_wells, p_max, p_min):
 
         self.wdir = os.path.join(cd.working_dir, cd.powerplant_path)
         self.sc = cd.scenario
@@ -76,8 +72,6 @@ class PowerPlantCoupling:
         self.p_min = p_min
 
         self.load_tespy_models()
-        self.p_max = p_max
-        self.p_min = p_min
 
     def load_tespy_models(self):
 
@@ -154,18 +148,18 @@ class PowerPlantCoupling:
     def _check_pressure_limits(self, pressure, mode):
         if pressure + 1e-4 < self.p_min and mode == 'discharge':
             msg = (
-                'Pressure is below minimum pressure: min=' + str(self.p_min) +
-                ', value=' + str(pressure) + '.'
+                f"Pressure is below minimum pressure: min={self.p_min}, "
+                f"actual value={pressure}."
             )
             logging.error(msg)
             return False
         elif pressure - 1e-4 > self.p_max and mode == 'charge':
             msg = (
-                'Pressure is above maximum pressure: max=' + str(self.p_max) +
-                ', value=' + str(pressure) + '.'
+                f"Pressure is above maximum pressure: max={self.p_max}"
+                f", actual value={pressure}."
             )
             logging.error(msg)
-            return 0, 0, 0
+            return False
 
         return True
 
@@ -194,6 +188,8 @@ class PowerPlantCoupling:
             Actual electrical power input/output of the power plant.
             Differs from scheduled power, if schedule can not be met.
         """
+        mode = self._MODE_MAP.get(mode, mode)
+
         if mode == 'shut-in':
             return 0, 0, 0
 
@@ -206,7 +202,7 @@ class PowerPlantCoupling:
             model = self.discharge_model
 
         specification = {
-            "power": power,
+            "power": abs(power / 1e6),
             "well_pressure": pressure,
             "powerplant_mass_flow": None  # unset the mass flow specification
         }
@@ -230,8 +226,10 @@ class PowerPlantCoupling:
                 )
 
         else:
-            model.nw.print_results()
-            msg = f"No solution could be found for input pair {power = }, {pressure = }."
+            msg = (
+                f"No solution could be found for input pair {power = }, "
+                f"{pressure = }."
+            )
             print(msg)
             logging.warning(msg)
             return 0, 0, 0
@@ -257,8 +255,8 @@ class PowerPlantCoupling:
             return self.get_power(massflow_max, pressure, mode)
         else:
             msg = (
-                'Calculation successful for power=' + str(power) +
-                ' pressure=' + str(pressure) + '. Mass flow=' + str(massflow) + '.'
+                f"Calculation successful for {power = }, {pressure = }: "
+                f"{massflow = }."
             )
             print(msg)
             # logging.debug(msg)
@@ -287,6 +285,8 @@ class PowerPlantCoupling:
         power : float
             Actual electrical power input/output of the power plant.
         """
+        mode = self._MODE_MAP.get(mode, mode)
+
         if mode == 'shut-in':
             return 0, 0, 0
 
