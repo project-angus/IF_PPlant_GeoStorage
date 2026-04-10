@@ -55,6 +55,9 @@ class ModelTemplate():
         elif mapped[0] == "Components":
             return self.nw.get_comp(mapped[1]).get_attr(mapped[2]).val
 
+        elif mapped[0] == "Customs":
+            return self._get_customs(parameter)
+
     def set_parameters(self, **kwargs) -> None:
         input_dict = self._map_to_input_dict(**kwargs)
         if "Connections" in input_dict:
@@ -70,6 +73,9 @@ class ModelTemplate():
 
     def _set_customs(self, specifications):
         pass
+
+    def _get_customs(self, parameter):
+        return None
 
     def save_design_state(self):
         self.nw.save(self._design_path)
@@ -118,6 +124,11 @@ class PowerPlant(ModelTemplate):
         instance.nw = Network.from_json(network_json)
         return instance
 
+    def _get_customs(self, parameter):
+        if parameter == "well_number":
+            c1 = self.nw.get_conn(self.config["well_mass_flow_connection"])
+            return 1 / c1.m_ref.ref.factor
+
     def _set_customs(self, specifications):
         if "well_number" in specifications:
             well_num = specifications["well_number"]
@@ -153,6 +164,35 @@ class PowerPlant(ModelTemplate):
         for key, stepping in steps.items():
             for step in stepping:
                 self.solve_model_offdesign(**{key: step})
+                if not self._solved:
+                    return False
+
+        return True
+
+    def solve_model_design_with_stepping(self, **kwargs) -> None:
+
+        current_values = {}
+        for key, value in kwargs.items():
+            if value is None:
+                self.set_parameters(**{key: value})
+            elif value == "var":
+                self.set_parameters(**{key: value})
+            else:
+                current_values[key] = self.get_parameter(key)
+                self.set_parameters(**{key: current_values[key]})
+
+        steps = {}
+        for key, value in current_values.items():
+            if round(kwargs[key], 4) == round(value, 4):
+                continue
+            num = 3
+            # go from target value (kwargs[key]) to old value (value) in num steps
+            # without the actual old value in the linspace, then reverse order
+            steps[key] = np.linspace(kwargs[key], value, num, endpoint=False)[::-1]
+
+        for key, stepping in steps.items():
+            for step in stepping:
+                self.solve_model_design(**{key: step})
                 if not self._solved:
                     return False
 

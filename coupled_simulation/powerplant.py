@@ -105,12 +105,29 @@ class PowerPlantCoupling:
             "power": self.config["charge"]["power_nominal"],
             "well_pressure": self.config["charge"]["pressure_nominal"]
         }
-        self.charge_model.solve_model_design(**charge_specifications)
-        charge_specifications = {
-            "well_dp": None,
-            "well_diameter": self.charge_model.get_parameter("well_diameter")
+        self.charge_model.solve_model_design_with_stepping(**charge_specifications)
+
+        discharge_specifications = {
+            "ambient_pressure": self.config["general"]["ambient pressure"],
+            "well_number": self.num_wells,
+            "well_dp": 2,
+            "well_diameter": "var",
+            "well_depth": self.min_well_depth,
+            "power": self.config["charge"]["power_nominal"],
+            "well_pressure": self.config["charge"]["pressure_nominal"],
+            "well_temperature": self.config["storage"]["temperature"]
         }
-        self.charge_model.solve_model_design(**charge_specifications)
+        self.discharge_model.solve_model_design_with_stepping(**discharge_specifications)
+
+        well_diameter = max([
+            m.get_parameter("well_diameter")
+            for m in [self.charge_model, self.discharge_model]
+        ])
+        specifications = {
+            "well_dp": None,
+            "well_diameter": well_diameter
+        }
+        self.charge_model.solve_model_design(**specifications)
         self.charge_model.save_design_state()
         self.charge_model.solve_model_offdesign()
         self.charge_model.dot_m_nominal = self.charge_model.get_parameter(
@@ -126,16 +143,7 @@ class PowerPlantCoupling:
             * self.config["charge"]["massflow_max_rel"]
         )
 
-        discharge_specifications = {
-            "ambient_pressure": self.config["general"]["ambient pressure"],
-            "well_number": self.num_wells,
-            "well_diameter": self.charge_model.get_parameter("well_diameter"),
-            "well_depth": self.min_well_depth,
-            "power": self.config["discharge"]["power_nominal"],
-            "well_pressure": self.config["discharge"]["pressure_nominal"],
-            "well_temperature": self.config["storage"]["temperature"]
-        }
-        self.discharge_model.solve_model_design(**discharge_specifications)
+        self.discharge_model.solve_model_design(**specifications)
         self.discharge_model.save_design_state()
         self.discharge_model.solve_model_offdesign()
         self.discharge_model.dot_m_nominal = self.discharge_model.get_parameter(
@@ -207,7 +215,7 @@ class PowerPlantCoupling:
         else:
             model = self.discharge_model
 
-        power = abs(power)/1e6
+        power = abs(power) / 1e6
         specification = {
             "power": power,
             "well_pressure": pressure,
