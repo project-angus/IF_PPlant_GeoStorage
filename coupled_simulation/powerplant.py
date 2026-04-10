@@ -98,11 +98,17 @@ class PowerPlantCoupling:
         charge_specifications = {
             "ambient_pressure": self.config["general"]["ambient pressure"],
             "ambient_temperature": self.config["general"]["ambient temperature"],
-            "well_number": self.config["storage"]["well_num"],
-            "well_diameter": self.config["storage"]["well_diameter"],
-            "well_depth": self.config["storage"]["well_depth"],
+            "well_number": self.num_wells,
+            "well_dp": 2,
+            "well_diameter": "var",
+            "well_depth": self.min_well_depth,
             "power": self.config["charge"]["power_nominal"],
             "well_pressure": self.config["charge"]["pressure_nominal"]
+        }
+        self.charge_model.solve_model_design(**charge_specifications)
+        charge_specifications = {
+            "well_dp": None,
+            "well_diameter": self.charge_model.get_parameter("well_diameter")
         }
         self.charge_model.solve_model_design(**charge_specifications)
         self.charge_model.save_design_state()
@@ -122,9 +128,9 @@ class PowerPlantCoupling:
 
         discharge_specifications = {
             "ambient_pressure": self.config["general"]["ambient pressure"],
-            "well_number": self.config["storage"]["well_num"],
-            "well_diameter": self.config["storage"]["well_diameter"],
-            "well_depth": self.config["storage"]["well_depth"],
+            "well_number": self.num_wells,
+            "well_diameter": self.charge_model.get_parameter("well_diameter"),
+            "well_depth": self.min_well_depth,
             "power": self.config["discharge"]["power_nominal"],
             "well_pressure": self.config["discharge"]["pressure_nominal"],
             "well_temperature": self.config["storage"]["temperature"]
@@ -201,7 +207,7 @@ class PowerPlantCoupling:
         else:
             model = self.discharge_model
 
-        power = abs(power)
+        power = abs(power)/1e6
         specification = {
             "power": power,
             "well_pressure": pressure,
