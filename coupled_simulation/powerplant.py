@@ -8,15 +8,12 @@ Created on Mon Feb 12 15:17:46 2018
 
 from copy import deepcopy
 import os
-import numpy as np
 import json
 import logging
-from tespy.networks import Network
 from tespy.tools.logger import logger
-from tespy.connections import Ref
 from .powerplant_template import PowerPlant
-from tespy.tools.helpers import TESPyNetworkError
-
+from tespy import __version__
+print("TESPy version:", __version__)
 
 logger.setLevel(logging.ERROR)
 
@@ -215,7 +212,7 @@ class PowerPlantCoupling:
         else:
             model = self.discharge_model
 
-        power = abs(power) / 1e6
+        power = abs(power)#/1e6
         specification = {
             "power": power,
             "well_pressure": pressure,
@@ -236,11 +233,12 @@ class PowerPlantCoupling:
 
                 mass_flow = model.get_parameter("powerplant_mass_flow")
                 heat = model.get_parameter("heat")
-
+                # negative sign for discharging output
+                output_power = -abs(power) if mode == "discharge" else abs(power)
                 return self._check_results(
                     mass_flow,
                     model.dot_m_min, model.dot_m_max,
-                    power, pressure, heat, mode
+                    output_power, pressure, heat, mode
                 )
 
         else:
@@ -345,4 +343,7 @@ class PowerPlantCoupling:
         else:
             power = model.get_parameter("power")
             heat = model.get_parameter("heat")
+            # negative sign for discharging output
+            if mode == "discharge":
+                power = -abs(power)
             return mass_flow, power, heat

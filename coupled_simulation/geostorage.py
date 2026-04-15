@@ -158,7 +158,7 @@ class GeoStorage:
         # function to re-order / get rid off line breaks etc. in input
         #break_count = util.getStringCount(rsm_list, 'SUMMARY OF RUN')
 
-        break_positions = util.getStringPositions(rsm_list, 'SUMMARY OF RUN')
+        break_positions = util.get_string_positions(rsm_list, 'SUMMARY OF RUN')
         break_count = len(break_positions)
 
         if break_count > 0:
@@ -286,13 +286,13 @@ class GeoStorage:
         :returns: no return value
         '''
         # open and read eclipse data file
-        ecl_data_file = util.getFile(os.path.join(self.working_dir_loc, self.current_simulation_title + '.DATA'))
+        ecl_data_file = util.get_file(os.path.join(self.working_dir_loc, self.current_simulation_title + '.DATA'))
         #print(self.working_dir_loc + self.simulation_title + '.DATA')
         #print ('rework ecl data tstep:', timestep)
         #rearrange the entries in the saved list
         if timestep == 1:
             #look for EQUIL and RESTART keyword
-            equil_pos = util.searchSection(ecl_data_file, 'EQUIL')
+            equil_pos = util.search_section(ecl_data_file, 'EQUIL')
             if(equil_pos > 0):
                 #delete equil and replace with restart
                 #assemble new string for restart section
@@ -300,13 +300,13 @@ class GeoStorage:
                 ecl_data_file[equil_pos + 1] =  '\'' + self.old_simulation_title + '\' \t'
                 ecl_data_file[equil_pos + 1] += str(int(self.restart_id) + timestep )  + ' /\n'
             else:
-                restart_pos = util.searchSection(ecl_data_file, "RESTART")
+                restart_pos = util.search_section(ecl_data_file, "RESTART")
                 if restart_pos > 0:
                     #assemble new string for restart section
                     ecl_data_file[restart_pos + 1] =  '\'' + self.old_simulation_title + '\' \t'
                     ecl_data_file[restart_pos + 1] += str(int(self.restart_id) + timestep)  + ' /\n'
         if timestep > 1:
-            restart_pos = util.searchSection(ecl_data_file, "RESTART")
+            restart_pos = util.search_section(ecl_data_file, "RESTART")
             if restart_pos > 0:
                 #assemble new string for restart section
                 ecl_data_file[restart_pos + 1] =  '\'' + self.old_simulation_title + '\' \t'
@@ -330,9 +330,9 @@ class GeoStorage:
                     fdst.write(fsrc.read())
 
         #now rearrange the well schedule section
-        schedule_pos = util.searchSection(ecl_data_file, "WCONINJE")
+        schedule_pos = util.search_section(ecl_data_file, "WCONINJE")
         if schedule_pos == -1:
-            schedule_pos = util.searchSection(ecl_data_file, "WCONPROD")
+            schedule_pos = util.search_section(ecl_data_file, "WCONPROD")
 
         #print(schedule_pos)
 
@@ -392,7 +392,7 @@ class GeoStorage:
             #    temp_path = self.working_dir_loc + self.simulation_title + '_init.DATA'
             # temp_path = self.working_dir_loc + self.current_simulation_title + '.DATA'
             temp_path = os.path.join(self.working_dir_loc, f"{self.current_simulation_title}.DATA")
-            util.writeFile(temp_path, ecl_data_file)
+            util.write_file(temp_path, ecl_data_file)
 
     def delete_sim_files(self, tstep):
 
@@ -430,7 +430,7 @@ class GeoStorage:
         for filename in os.listdir(self.working_dir_loc):
             if any(filename.endswith(ext) for ext in termination_list):
                 file_path = os.path.join(self.working_dir_loc, filename)
-                util.deleteFile(file_path)
+                util.delete_file(file_path)
 
     def execute_ecl(self, tstep, iter_step, op_mode):
         '''
@@ -474,7 +474,7 @@ class GeoStorage:
         #else:
         #    filename = self.working_dir_loc + self.simulation_title + '_init.RSM'
         filename = os.path.join(self.working_dir_loc, self.current_simulation_title + '.RSM')
-        results = util.getFile(filename)
+        results = util.get_file(filename)
         #print(results)
         #sort the rsm data to a more uniform dataset
         # reorderd_rsm_data = self.rearrangeRSMDataArray(results)
@@ -484,7 +484,7 @@ class GeoStorage:
         elif self.simulator == 'OPM':
             reorderd_rsm_data = self.rearrange_rsm_data_array_opm(results)
 
-        well_results = util.contractDataArray(reorderd_rsm_data)
+        well_results = util.contract_data_array(reorderd_rsm_data)
 
         # for OPM case, need extra row
         if len(well_results) == 2:
@@ -514,7 +514,7 @@ class GeoStorage:
 
         # get well pressures
         pressure_keyword = 'WBHP'
-        bhp_positions = util.getStringPositions(well_results[0], pressure_keyword)
+        bhp_positions = util.get_string_positions(well_results[0], pressure_keyword)
 
         for i in bhp_positions:
             well_pressures.append(float(well_results[-1][i]))
@@ -535,14 +535,14 @@ class GeoStorage:
         if current_op_mode == 'discharging': #negative flow rates
             #get all positions of WGPR entries in well_results
             flow_keyword = 'WGPR'
-            flow_positions = util.getStringPositions(well_results[0], flow_keyword)
+            flow_positions = util.get_string_positions(well_results[0], flow_keyword)
             for i in flow_positions:
                 well_flowrates_days.append(float(well_results[-1][i]))
                 well_names_loc.append(well_results[2][i])
 
         elif current_op_mode == 'charging': #positive flow rates
             flow_keyword = 'WGIR'
-            flow_positions = util.getStringPositions(well_results[0], flow_keyword)
+            flow_positions = util.get_string_positions(well_results[0], flow_keyword)
             for i in flow_positions:
                 well_flowrates_days.append(float(well_results[-1][i]))
                 well_names_loc.append(well_results[2][i])
@@ -691,8 +691,8 @@ class GeoStorage:
         # open and read eclipse data file
 
         schedule_path = os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.schedule")
-        schedule_file = util.getFile(schedule_path)
-        flowrate_pos = util.searchSection(schedule_file, ' $CURVE') + 1
+        schedule_file = util.get_file(schedule_path)
+        flowrate_pos = util.search_section(schedule_file, ' $CURVE') + 1
 
         if timestep == 0:
             pass
@@ -701,13 +701,13 @@ class GeoStorage:
         if  timestep >= 1 and iter_step == 0: #maybe iter_step == 0 is enough
 
             resprop_path = os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.res_prop")
-            resprop_file = util.getFile(resprop_path)
-            pressure_pos = util.searchSection(resprop_file, ' $INITIAL_PRESSURE') + 1
+            resprop_file = util.get_file(resprop_path)
+            pressure_pos = util.search_section(resprop_file, ' $INITIAL_PRESSURE') + 1
 
             # retrieve the previous flow rate and mass volume using the results from the current simulation
             result_temp_path = os.path.join(self.working_dir_loc, f"{self.old_simulation_title}.RESULT_WELLS")
 
-            results = util.getFile(result_temp_path)
+            results = util.get_file(result_temp_path)
 
             if len(results) <= 1:
                 print('Warning: there is no simulation result')
@@ -717,7 +717,7 @@ class GeoStorage:
             header = results[0].strip().split('\t')
 
             # find indices of relevant keyword
-            pressure_idx = util.getStringPositions(header, 'RES_PRESS')
+            pressure_idx = util.get_string_positions(header, 'RES_PRESS')
 
             # get data from second line (first line shows variable unit)
             data = [line.strip().split('\t') for line in results[2:]]
@@ -726,7 +726,7 @@ class GeoStorage:
             # update pressure reservoir pressure in INITIAL PRESSURE keyword
             resprop_file[pressure_pos] = f' {round(pressure_res[0], 3)}\n'
 
-            util.writeFile(resprop_path, resprop_file)
+            util.write_file(resprop_path, resprop_file)
 
         if op_mode == 'charging':
            schedule_file[flowrate_pos] = f' 0 {round(flowrate, 3)}\n'
@@ -738,7 +738,7 @@ class GeoStorage:
            schedule_file[flowrate_pos] = ' 0 0\n'
 
         # update flow rate in the CURVE keyword
-        util.writeFile(schedule_path, schedule_file)
+        util.write_file(schedule_path, schedule_file)
 
     def get_proxy_results(self, current_op_mode):
         '''
@@ -749,7 +749,7 @@ class GeoStorage:
         :returns: returns a tuple of float values containing pressure and actual storage flow rate
         '''
         file_path = os.path.join(self.working_dir_loc, f"{self.simulation_title_orig}.RESULT_WELLS")
-        results = util.getFile(file_path)
+        results = util.get_file(file_path)
 
         if len(results) <= 1:
             print('Warning: there is no simulation result')
@@ -759,8 +759,8 @@ class GeoStorage:
         header = results[0].strip().split('\t')
 
         # find indices of relevant columns
-        bhp_idx = util.getStringPositions(header, 'BHP')
-        mfr_idx = util.getStringPositions(header, 'MFR')
+        bhp_idx = util.get_string_positions(header, 'BHP')
+        mfr_idx = util.get_string_positions(header, 'MFR')
 
         # extract rate and pressure data from second line (first is unit row)
         data = [line.strip().split('\t') for line in results[2:]]

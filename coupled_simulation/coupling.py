@@ -9,9 +9,8 @@ __author__ = "witte, wtp, fgasa"
 
 import sys
 import getopt
-import pandas as pd
-import numpy as np
-from coupled_simulation import powerplant as pp, geostorage as gs
+import csv
+from coupled_simulation import powerplant as pp, geostorage as gs, utilities as utils
 import json
 import datetime
 import os
@@ -42,7 +41,7 @@ def main(argv):
     except getopt.GetoptError:
         print('test.py -i <inputpath>')
         sys.exit(2)
-    # print(opts)
+
     print(argv)
     for opt, arg in opts:
         if opt == '-h':
@@ -61,7 +60,7 @@ def main(argv):
     if os.path.isfile(path_log):
         os.remove(path_log)
     #save screen output in file
-    sys.stdout = Logger(path_log)
+    sys.stdout = utils.Logger(path_log)
 
     print('Input file is:')
     print(path)
@@ -70,10 +69,9 @@ def main(argv):
     print('Assembling model data...')
 
     cd = CouplingData(path=path)
-
+    sys.stdout.debug = cd.debug
     # create instances for power plant and storage
     geostorage = gs.GeoStorage(cd)
-
     min_well_depth = min(geostorage.well_depths)
 
     powerplant = pp.PowerPlantCoupling(cd, min_well_depth, len(geostorage.well_names), max(geostorage.well_upper_BHP), min(geostorage.well_lower_BHP))
@@ -81,21 +79,22 @@ def main(argv):
     print("=" * 111)
     print('Reading input time series...')
 
-    input_ts = read_series(os.path.join(cd.working_dir, cd.input_timeseries_path))
+    input_ts = utils.read_series(os.path.join(cd.working_dir, cd.input_timeseries_path))
 
     #prepare data structures
     print("=" * 111)
     print('Preparing output data structures...')
-    variable_list = []
-    if cd.auto_eval_output == True:
-        variable_list = ['time', 'power_target', 'massflow_target', 'power_actual', 'heat', 'massflow_actual','storage_pressure', 'Tstep_accepted', 'delta_power', 'delta_massflow' ]
+
+    if cd.auto_eval_output:
+        variable_list = ['time', 'power_target', 'massflow_target', 'power_actual', 'heat',
+                         'massflow_actual', 'storage_pressure', 'Tstep_accepted', 'delta_power', 'delta_massflow']
     else:
-        variable_list = ['time', 'power_target', 'massflow_target', 'power_actual', 'heat', 'massflow_actual', 'storage_pressure' ]
+        variable_list = ['time', 'power_target', 'massflow_target', 'power_actual', 'heat',
+                         'massflow_actual', 'storage_pressure']
     #one output line per timestep...
-    output_ts = pd.DataFrame(index=np.arange(0, cd.t_steps_total),columns=variable_list)
+    output_data = []
+
     current_time = cd.t_start - datetime.timedelta(seconds=cd.t_step_length)
-    output_ts.loc[0] = 0
-    output_ts.loc[0, "time"] = current_time
 
     '''debug values from here onwards'''
     #data = [0.0, 0.0]
@@ -106,7 +105,10 @@ def main(argv):
 
     # get initial pressure before the time loop
     p0, dummy_flow = geostorage.call_storage_simulation(0.0, -1, 0, cd, 'init')
-    output_ts.loc[0,"storage_pressure"] = p0
+    if cd.auto_eval_output:
+        output_data.append([current_time, 0.0, 0.0, 0.0, 0.0, 0.0, p0, True, 0.0, 0.0])
+    else:
+        output_data.append([current_time, 0.0, 0.0, 0.0, 0.0, 0.0, p0])
     print('Simulation initialzation completed.')
     print("=" * 111)
 
@@ -121,13 +123,12 @@ def main(argv):
         current_time = datetime.timedelta(seconds=t_step * cd.t_step_length) + cd.t_start
 
         try:
-            power_target = input_ts.loc[current_time].power
+            power_target = input_ts[current_time]
             last_time = current_time
         except KeyError:
-            power_target = input_ts.loc[last_time].power
+            power_target = input_ts[last_time]
 
         print("=" * 111)
-
         print(f"{'Advancing to timestep:':30s} {t_step}")
         print(f"{'Target power output for this time step is:':30s} {'%.3f' % power_target}")
         sys.stdout.flush()
@@ -154,17 +155,29 @@ def main(argv):
             delta_power = abs(power_actual) - abs(power_target)
             delta_massflow = abs(m_actual) - abs(m_target)
 
-            output_ts.loc[t_step+1] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
-                                                    p_actual, success, delta_power, delta_massflow])
+            output_data.append([current_time, power_target, m_target, power_actual, heat, m_actual,
+                                p_actual, success, delta_power, delta_massflow])
         else:
-            output_ts.loc[t_step+1] = np.array([current_time, power_target, m_target, power_actual, heat, m_actual,
-                                                    p_actual])
+            output_data.append([current_time, power_target, m_target, power_actual, heat, m_actual,
+                                p_actual])
 
-        #if t_step % cd.save_nth_t_step == 0:
-        output_ts.to_csv(os.path.join(cd.working_dir, cd.output_timeseries_path), index=False, sep=';')
+        # periodic save logic, to safely default to 10 if 'save_nth_t_step' is missing from the main JSON
+        save_interval = getattr(cd, 'save_nth_t_step', 10)
+        if save_interval > 0 and t_step % save_interval == 0:
+            output_path = os.path.join(cd.working_dir, cd.output_timeseries_path)
+            with open(output_path, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f, delimiter=';')
+                writer.writerow(variable_list)
+                writer.writerows(output_data)
 
         #save old power target
         power_target_t0 = power_target
+    # write the collected array once at the end
+    output_path = os.path.join(cd.working_dir, cd.output_timeseries_path)
+    with open(output_path, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f, delimiter=';')
+        writer.writerow(variable_list)
+        writer.writerows(output_data)
 
     end_time = datetime.datetime.now()
     elapsed = end_time - start_time  # this is a timedelta object
@@ -177,7 +190,7 @@ def main(argv):
     print("=" * 111)
     print("\n" * 3)
 
-    if isinstance(sys.stdout, Logger):
+    if isinstance(sys.stdout, utils.Logger):
         sys.stdout.log.close()
         sys.stdout = sys.stdout.terminal
 
@@ -277,7 +290,7 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
     delta_p_iter = 0.0
     delta_p_iter_rel = 0.0
 
-    if massflow == 0.0: #matching float values, potentionally dangerous
+    if abs(massflow) < 1E-7: #matching float values, potentionally dangerous
         m = 0.0
         storage_mode = 'shut-in'
     elif massflow < 0.0:
@@ -356,8 +369,8 @@ def calc_timestep_mass(powerplant, geostorage, massflow, p0, md, tstep, pp_off):
 
             sys.stdout.flush()
         print('Summary of iteration:')
-        print('m_target / m_storage\t\t', '%.6f'%m, '/', '%.6f'%m_corr, '[kg/s]')
-        print('p_assumed / p_storage\t\t', '%.6f'%p0_temp, '/', '%.6f'%p1, '[bars]')
+        print(f"m_target / m_storage\t\t {m:.6f} / {m_corr:.6f} [kg/s]")
+        print(f"p_assumed / p_storage\t\t {p0_temp:.6f} / {p1:.6f} [bar]")
 
         if storage_mode == 'charging' or storage_mode == 'discharging':
             # pressure check
@@ -451,15 +464,11 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
     target_power_tstep = power
     power_corr = power
     heat = 0.0
-    p_delta_limit = 0.0
-    p_limit = 0.0
 
     delta_m_iter = 0.0
     delta_m_iter_rel = 0.0
-    delta_p_iter = 0.0
-    delta_p_iter_rel = 0.0
 
-    if power == 0.0: #matching float values, potentionally dangerous
+    if abs(power) < 1E-7: #matching float values, potentionally dangerous
         m = 0.0
         storage_mode = 'shut-in'
     elif power < 0.0:
@@ -469,7 +478,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
         storage_mode = 'charging'
         #m, power_corr = powerplant.get_mass_flow(power, p0, storage_mode)
 
-    print('Operational mode of the system is is: ', storage_mode)
+    print(f"Operational mode of the system is: {storage_mode}")
     sys.stdout.flush()
 
     #moved inner iteration into timestep function,
@@ -479,7 +488,7 @@ def calc_timestep(powerplant, geostorage, power, p0, md, tstep, pp_off):
     for iter_step in range(md.max_iter): #do time-specific iterations
 
         if tstep_accepted:
-            print('Message: Timestep accepted after iteration ', iter_step - 1)
+            print(f"Message: Timestep accepted after iteration {iter_step - 1}")
             break
         print("-" * 50)
         print(f"{'Current iteration:':30s} {iter_step}")
@@ -613,12 +622,20 @@ def read_series(path):
     :type path: str
     :returns: ts (*pandas.DataFrame*) - dataframe containing the time series
     """
-    ts = pd.read_csv(path, delimiter=';', decimal='.')
-    ts = ts.set_index('timeindex')
-    ts.index = pd.to_datetime(ts.index)
-    ts['power'] = ts['input'] - ts['output']
+    ts_dict = {}
+    with open(path, mode='r', newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f, delimiter=';')
 
-    return ts
+        for row in reader:
+            time_str = row['timeindex']
+            # Fast, standard parsing. Assuming format is always standard after first check.
+            t_idx = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+
+            # Net power [MW or kW]
+            power = float(row['input']) - float(row['output'])
+            ts_dict[t_idx] = power
+
+    return ts_dict
 
 class CouplingData:
     """
@@ -628,16 +645,12 @@ class CouplingData:
     """
 
     def __init__(self, path):
-
-        # load data.json information into objects dictionary (= attributes of
-        # the object)
         self.path = path
 
         with open(path) as f:
             self.__dict__.update(json.load(f))
 
         self.auto_eval_output = False
-
         if self.eval_output == "True":
             self.auto_eval_output = True
 
@@ -660,22 +673,6 @@ class CouplingData:
 
         print('Reading input file \"' + self.scenario + '.main_ctrl.json\" ')
         print('in working directory \"' + self.working_dir + '\"')
-
-class Logger(object):
-
-    def __init__(self, a_string):
-        self.terminal = sys.stdout
-        self.log = open(a_string, "a")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-
-    def flush(self):
-        #this flush method is needed for python 3 compatibility.
-        #this handles the flush command by doing nothing.
-        #you might want to specify some extra behavior here.
-        pass
 
 if __name__ == '__main__':
     main(sys.argv[1:])
