@@ -8,8 +8,11 @@ __author__ = "wtp, witte"
 """
 
 import os
+import sys
+import csv
+import datetime
 
-def cleanControlFileList(a_list):
+def clean_control_file_list(a_list):
     '''
     Function to delete empty rows and whitespaces from an xml-style list
     :param a_list: the input list
@@ -23,7 +26,7 @@ def cleanControlFileList(a_list):
 
     return another_list
 
-def getIdxfromControlFileList(a_list, keyword):
+def get_idxfrom_control_file_list(a_list, keyword):
     '''
     Function to obtain index of the beginning of a specific keyword in an xml type list
     :param a_list: the input list, following an xml format style
@@ -35,15 +38,15 @@ def getIdxfromControlFileList(a_list, keyword):
     key_string_start = '<' + keyword + '>'
     key_string_end = '<\'' + keyword + '>'
 
-    pos_ident = searchSection(a_list, key_string_start)
-    end_pos_ident = searchSection(a_list, key_string_end)
+    pos_ident = search_section(a_list, key_string_start)
+    end_pos_ident = search_section(a_list, key_string_end)
 
     if pos_ident >= 0 and pos_ident < end_pos_ident:
         return a_list[pos_ident + 1]
     else:
         return -1
 
-def getValuefromControlFileList(a_list, keyword):
+def get_valuefrom_control_file_list(a_list, keyword):
     '''
     Function to obtain values for a specific keyword from an xml type list
     :param a_list: the input list, following an xml format style
@@ -55,16 +58,15 @@ def getValuefromControlFileList(a_list, keyword):
     key_string_start = '<' + keyword + '>'
     key_string_end = '<\'' + keyword + '>'
 
-    pos_ident = searchSection(a_list, key_string_start)
-    end_pos_ident = searchSection(a_list, key_string_end)
+    pos_ident = search_section(a_list, key_string_start)
+    end_pos_ident = search_section(a_list, key_string_end)
 
     if pos_ident >= 0 and pos_ident < end_pos_ident:
         return a_list[pos_ident + 1]
     else:
         return 'KEY_NOT_FOUND'
 
-
-def writeFile(path, a_list):
+def write_file(path, a_list):
     '''
     Short function to write a file based on a list of strings
 
@@ -76,9 +78,7 @@ def writeFile(path, a_list):
         for entry in a_list:
             f.write("%s" % entry)
 
-
-
-def getFile(path):
+def get_file(path):
     '''
     Short function to read a file and save as a list fo strings
 
@@ -93,8 +93,7 @@ def getFile(path):
     
     return a_list
 
-
-def contractDataArray(input):
+def contract_data_array(input):
     '''
     Short function to clean and contract a data array
 
@@ -137,11 +136,11 @@ def contractDataArray(input):
     
     return output
 
-def deleteFile(path_to_file):
+def delete_file(path_to_file):
     if os.path.exists(path_to_file):
         os.remove(path_to_file)
 
-def searchSection(data_list, section):
+def search_section(data_list, section):
     '''
     function to search for a given string in a list of strings
 
@@ -161,9 +160,7 @@ def searchSection(data_list, section):
             pos = data_list.index(section)
     return pos
 
-
-
-def getStringPositions(input, keyword):
+def get_string_positions(input, keyword):
     '''
     function to get all positions of a string in a list
 
@@ -175,9 +172,7 @@ def getStringPositions(input, keyword):
     '''
     return [i for i, s in enumerate(input) if keyword in s]
 
-
-
-def getStringCount(input, keyword):
+def get_string_count(input, keyword):
     '''
     function to count the occurence of a string in a list
 
@@ -188,3 +183,49 @@ def getStringCount(input, keyword):
     :returns: int
     '''
     return sum ( 1 for s in input if keyword in s)
+
+
+def read_series(path):
+    '''
+    reads now the input time series file using csv package.
+
+    :param path: path to input time series
+    :type path: str
+    :returns: ts_dict (*dict*) - dictionary mapping datetime to power
+    '''
+    ts_dict = {}
+    with open(path, mode='r', newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f, delimiter=';')
+
+        for row in reader:
+            time_str = row['timeindex']
+            # Fast, standard parsing. Assuming format is always standard after first check.
+            t_idx = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+
+            # Net power [MW or kW]
+            power = float(row['input']) - float(row['output'])
+            ts_dict[t_idx] = power
+
+    return ts_dict
+
+class Logger(object):
+    """
+    Redirects stdout to a file and the terminal.
+    If debug=False, it safely ignores flush() to prevent
+    massive performance bottlenecks during simulation loops.
+    """
+    def __init__(self, filepath):
+        self.terminal = sys.stdout
+        self.log = open(filepath, "a")
+        self.debug = False # toggle this from coupling.py
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        # this handles the flush command by doing nothing.
+        if self.debug:
+            self.terminal.flush()
+            self.log.flush()
