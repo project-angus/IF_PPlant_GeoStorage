@@ -1,0 +1,1902 @@
+{
+  "Network": {
+    "m_range": [
+      -1000000000000.0,
+      1000000000000.0
+    ],
+    "p_range": [
+      200.0,
+      30000000.0
+    ],
+    "h_range": [
+      1000.0,
+      7000000.0
+    ],
+    "units": {
+      "temperature": "degC",
+      "temperature_difference": "delta_degC",
+      "enthalpy": "J/kg",
+      "specific_energy": "J/kg",
+      "entropy": "J/kg/K",
+      "pressure": "bar",
+      "pressure_difference": "bar",
+      "mass_flow": "kg/s",
+      "volumetric_flow": "m3/s",
+      "specific_volume": "m3/kg",
+      "power": "MW",
+      "heat": "MW",
+      "quality": "1",
+      "vapor_mass_fraction": "1",
+      "efficiency": "1",
+      "ratio": "1",
+      "length": "m",
+      "speed": "m/s",
+      "area": "m2",
+      "thermal_conductivity": "W/m/K",
+      "heat_transfer_coefficient": "W/K",
+      "angle": "degree",
+      "frequency": "1/s"
+    }
+  },
+  "Connection": {
+    "Connection": {
+      "01": {
+        "source": "fresh air",
+        "target": "cooler 1",
+        "source_id": "out1",
+        "target_id": "in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "mixing_rule": "ideal-cond",
+        "m": {
+          "val": 232.68710803044482,
+          "val_SI": 232.68710803044482,
+          "is_set": false,
+          "unit": "kilogram / second"
+        },
+        "p": {
+          "val": 99.43285966111783,
+          "val_SI": 9943285.966111783,
+          "is_set": false,
+          "unit": "bar"
+        },
+        "h": {
+          "val": 419298.6129144029,
+          "val_SI": 419298.6129144029,
+          "is_set": false,
+          "unit": "joule / kilogram"
+        },
+        "T": {
+          "val": 38.120220913144806,
+          "val_SI": 311.2702209131448,
+          "is_set": false,
+          "unit": "degree_Celsius"
+        },
+        "T_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "T_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "v": {
+          "val": 2.0910557691812275,
+          "val_SI": 2.0910557691812275,
+          "is_set": false,
+          "unit": "m3 / second"
+        },
+        "x": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "dimensionless"
+        },
+        "td_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "td_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "m_ref": {},
+        "p_ref": {
+          "is_set": true,
+          "unit": null,
+          "conn": "12",
+          "factor": 1,
+          "delta": 0
+        },
+        "h_ref": {
+          "is_set": true,
+          "unit": null,
+          "conn": "12",
+          "factor": 1,
+          "delta": 0
+        },
+        "T_ref": {},
+        "v_ref": {},
+        "vol": {
+          "val": 0.008986556182165595,
+          "val_SI": 0.008986556182165595,
+          "is_set": false,
+          "unit": "m3 / kilogram"
+        },
+        "s": {
+          "val": 2551.343413835764,
+          "val_SI": 2551.343413835764,
+          "is_set": false,
+          "unit": "joule / kelvin / kilogram"
+        },
+        "fluid": {
+          "val": {
+            "Air": 1.0
+          },
+          "is_set": [
+            "Air"
+          ],
+          "engine": {
+            "Air": "CoolPropWrapper"
+          },
+          "back_end": {
+            "Air": null
+          }
+        },
+        "fluid_balance": {
+          "val": false,
+          "is_set": false
+        },
+        "Td_bp": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "state": {
+          "val": NaN,
+          "is_set": false
+        }
+      },
+      "02": {
+        "source": "cooler 1",
+        "target": "turbine stage 1",
+        "source_id": "out1",
+        "target_id": "in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "mixing_rule": "ideal-cond",
+        "m": {
+          "val": 232.68710803044482,
+          "val_SI": 232.68710803044482,
+          "is_set": false,
+          "unit": "kilogram / second"
+        },
+        "p": {
+          "val": 97.44420246789548,
+          "val_SI": 9744420.246789547,
+          "is_set": false,
+          "unit": "bar"
+        },
+        "h": {
+          "val": 704152.5212586974,
+          "val_SI": 704152.5212586974,
+          "is_set": false,
+          "unit": "joule / kilogram"
+        },
+        "T": {
+          "val": 300.0,
+          "val_SI": 573.1500000000003,
+          "is_set": true,
+          "unit": "degree_Celsius"
+        },
+        "T_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "T_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "v": {
+          "val": 4.08153603216146,
+          "val_SI": 4.08153603216146,
+          "is_set": false,
+          "unit": "m3 / second"
+        },
+        "x": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "dimensionless"
+        },
+        "td_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "td_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "m_ref": {},
+        "p_ref": {},
+        "h_ref": {},
+        "T_ref": {},
+        "v_ref": {},
+        "vol": {
+          "val": 0.01754087738985278,
+          "val_SI": 0.01754087738985278,
+          "is_set": false,
+          "unit": "m3 / kilogram"
+        },
+        "s": {
+          "val": 3223.3598090692567,
+          "val_SI": 3223.3598090692567,
+          "is_set": false,
+          "unit": "joule / kelvin / kilogram"
+        },
+        "fluid": {
+          "val": {
+            "Air": 1.0
+          },
+          "is_set": [],
+          "engine": {
+            "Air": "CoolPropWrapper"
+          },
+          "back_end": {
+            "Air": null
+          }
+        },
+        "fluid_balance": {
+          "val": false,
+          "is_set": false
+        },
+        "Td_bp": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "state": {
+          "val": NaN,
+          "is_set": false
+        }
+      },
+      "03": {
+        "source": "turbine stage 1",
+        "target": "cooler 2",
+        "source_id": "out1",
+        "target_id": "in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "mixing_rule": "ideal-cond",
+        "m": {
+          "val": 232.68710803044482,
+          "val_SI": 232.68710803044482,
+          "is_set": false,
+          "unit": "kilogram / second"
+        },
+        "p": {
+          "val": 10.204081632653063,
+          "val_SI": 1020408.1632653062,
+          "is_set": false,
+          "unit": "bar"
+        },
+        "h": {
+          "val": 467684.6119276273,
+          "val_SI": 467684.6119276273,
+          "is_set": false,
+          "unit": "joule / kilogram"
+        },
+        "T": {
+          "val": 69.45580084346221,
+          "val_SI": 342.6058008434622,
+          "is_set": false,
+          "unit": "degree_Celsius"
+        },
+        "T_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "T_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "v": {
+          "val": 22.42490188820764,
+          "val_SI": 22.42490188820764,
+          "is_set": false,
+          "unit": "m3 / second"
+        },
+        "x": {
+          "val": -1.0,
+          "val_SI": -1.0,
+          "is_set": false,
+          "unit": "dimensionless"
+        },
+        "td_dew": {
+          "val": 234.19025980241702,
+          "val_SI": 234.19025980241702,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "td_bubble": {
+          "val": -236.06262237607427,
+          "val_SI": -236.06262237607427,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "m_ref": {},
+        "p_ref": {},
+        "h_ref": {},
+        "T_ref": {},
+        "v_ref": {},
+        "vol": {
+          "val": 0.09637363272087064,
+          "val_SI": 0.09637363272087064,
+          "is_set": false,
+          "unit": "m3 / kilogram"
+        },
+        "s": {
+          "val": 3353.0732911570417,
+          "val_SI": 3353.0732911570417,
+          "is_set": false,
+          "unit": "joule / kelvin / kilogram"
+        },
+        "fluid": {
+          "val": {
+            "Air": 1.0
+          },
+          "is_set": [],
+          "engine": {
+            "Air": "CoolPropWrapper"
+          },
+          "back_end": {
+            "Air": null
+          }
+        },
+        "fluid_balance": {
+          "val": false,
+          "is_set": false
+        },
+        "Td_bp": {
+          "val": 236.06262237607427,
+          "val_SI": 236.06262237607427,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "state": {
+          "val": NaN,
+          "is_set": false
+        }
+      },
+      "04": {
+        "source": "cooler 2",
+        "target": "turbine stage 2",
+        "source_id": "out1",
+        "target_id": "in1",
+        "design_path": null,
+        "design": [
+          "p"
+        ],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "mixing_rule": "ideal-cond",
+        "m": {
+          "val": 232.68710803044482,
+          "val_SI": 232.68710803044482,
+          "is_set": false,
+          "unit": "kilogram / second"
+        },
+        "p": {
+          "val": 10.0,
+          "val_SI": 1000000.0,
+          "is_set": true,
+          "unit": "bar"
+        },
+        "h": {
+          "val": 757767.8396110948,
+          "val_SI": 757767.8396110948,
+          "is_set": false,
+          "unit": "joule / kilogram"
+        },
+        "T": {
+          "val": 350.0,
+          "val_SI": 623.1499999999999,
+          "is_set": true,
+          "unit": "degree_Celsius"
+        },
+        "T_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "T_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "v": {
+          "val": 41.77572133250483,
+          "val_SI": 41.77572133250483,
+          "is_set": false,
+          "unit": "m3 / second"
+        },
+        "x": {
+          "val": -1.0,
+          "val_SI": -1.0,
+          "is_set": false,
+          "unit": "dimensionless"
+        },
+        "td_dew": {
+          "val": 515.0477286290235,
+          "val_SI": 515.0477286290235,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "td_bubble": {
+          "val": -516.931665721042,
+          "val_SI": -516.931665721042,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "m_ref": {},
+        "p_ref": {},
+        "h_ref": {},
+        "T_ref": {},
+        "v_ref": {},
+        "vol": {
+          "val": 0.17953603741140178,
+          "val_SI": 0.17953603741140178,
+          "is_set": false,
+          "unit": "m3 / kilogram"
+        },
+        "s": {
+          "val": 3976.241374237461,
+          "val_SI": 3976.241374237461,
+          "is_set": false,
+          "unit": "joule / kelvin / kilogram"
+        },
+        "fluid": {
+          "val": {
+            "Air": 1.0
+          },
+          "is_set": [],
+          "engine": {
+            "Air": "CoolPropWrapper"
+          },
+          "back_end": {
+            "Air": null
+          }
+        },
+        "fluid_balance": {
+          "val": false,
+          "is_set": false
+        },
+        "Td_bp": {
+          "val": 516.931665721042,
+          "val_SI": 516.931665721042,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "state": {
+          "val": NaN,
+          "is_set": false
+        }
+      },
+      "05": {
+        "source": "turbine stage 2",
+        "target": "power plant outlet",
+        "source_id": "out1",
+        "target_id": "in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "mixing_rule": "ideal-cond",
+        "m": {
+          "val": 232.68710803044482,
+          "val_SI": 232.68710803044482,
+          "is_set": false,
+          "unit": "kilogram / second"
+        },
+        "p": {
+          "val": 1.01325,
+          "val_SI": 101325.0,
+          "is_set": true,
+          "unit": "bar"
+        },
+        "h": {
+          "val": 484724.49138071976,
+          "val_SI": 484724.49138071976,
+          "is_set": false,
+          "unit": "joule / kilogram"
+        },
+        "T": {
+          "val": 84.81977175988959,
+          "val_SI": 357.96977175988957,
+          "is_set": false,
+          "unit": "degree_Celsius"
+        },
+        "T_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "T_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "v": {
+          "val": 235.98207261419785,
+          "val_SI": 235.98207261419785,
+          "is_set": false,
+          "unit": "m3 / second"
+        },
+        "x": {
+          "val": -1.0,
+          "val_SI": -1.0,
+          "is_set": false,
+          "unit": "dimensionless"
+        },
+        "td_dew": {
+          "val": 276.2497358074887,
+          "val_SI": 276.2497358074887,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "td_bubble": {
+          "val": -279.066814575755,
+          "val_SI": -279.066814575755,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "m_ref": {},
+        "p_ref": {},
+        "h_ref": {},
+        "T_ref": {},
+        "v_ref": {},
+        "vol": {
+          "val": 1.0141604948019807,
+          "val_SI": 1.0141604948019807,
+          "is_set": false,
+          "unit": "m3 / kilogram"
+        },
+        "s": {
+          "val": 4064.763782723202,
+          "val_SI": 4064.763782723202,
+          "is_set": false,
+          "unit": "joule / kelvin / kilogram"
+        },
+        "fluid": {
+          "val": {
+            "Air": 1.0
+          },
+          "is_set": [],
+          "engine": {
+            "Air": "CoolPropWrapper"
+          },
+          "back_end": {
+            "Air": null
+          }
+        },
+        "fluid_balance": {
+          "val": false,
+          "is_set": false
+        },
+        "Td_bp": {
+          "val": 279.066814575755,
+          "val_SI": 279.066814575755,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "state": {
+          "val": NaN,
+          "is_set": false
+        }
+      },
+      "11": {
+        "source": "cas",
+        "target": "well",
+        "source_id": "out1",
+        "target_id": "in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "mixing_rule": "ideal-cond",
+        "m": {
+          "val": 23.268710803044485,
+          "val_SI": 23.268710803044485,
+          "is_set": false,
+          "unit": "kilogram / second"
+        },
+        "p": {
+          "val": 100.0,
+          "val_SI": 10000000.0,
+          "is_set": true,
+          "unit": "bar"
+        },
+        "h": {
+          "val": 419298.6129144029,
+          "val_SI": 419298.6129144029,
+          "is_set": false,
+          "unit": "joule / kilogram"
+        },
+        "T": {
+          "val": 38.2,
+          "val_SI": 311.3499999997416,
+          "is_set": true,
+          "unit": "degree_Celsius"
+        },
+        "T_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "T_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "v": {
+          "val": 0.20800695144472273,
+          "val_SI": 0.20800695144472273,
+          "is_set": false,
+          "unit": "m3 / second"
+        },
+        "x": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "dimensionless"
+        },
+        "td_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "td_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "m_ref": {},
+        "p_ref": {},
+        "h_ref": {},
+        "T_ref": {},
+        "v_ref": {},
+        "vol": {
+          "val": 0.008939341470413868,
+          "val_SI": 0.008939341470413868,
+          "is_set": false,
+          "unit": "m3 / kilogram"
+        },
+        "s": {
+          "val": 2549.7105647154053,
+          "val_SI": 2549.7105647154053,
+          "is_set": false,
+          "unit": "joule / kelvin / kilogram"
+        },
+        "fluid": {
+          "val": {
+            "Air": 1.0
+          },
+          "is_set": [
+            "Air"
+          ],
+          "engine": {
+            "Air": "CoolPropWrapper"
+          },
+          "back_end": {
+            "Air": null
+          }
+        },
+        "fluid_balance": {
+          "val": false,
+          "is_set": false
+        },
+        "Td_bp": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "state": {
+          "val": NaN,
+          "is_set": false
+        }
+      },
+      "12": {
+        "source": "well",
+        "target": "power plant outlet source",
+        "source_id": "out1",
+        "target_id": "in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "mixing_rule": "ideal-cond",
+        "m": {
+          "val": 23.268710803044485,
+          "val_SI": 23.268710803044485,
+          "is_set": false,
+          "unit": "kilogram / second"
+        },
+        "p": {
+          "val": 99.43285966111783,
+          "val_SI": 9943285.966111783,
+          "is_set": false,
+          "unit": "bar"
+        },
+        "h": {
+          "val": 419298.6129144029,
+          "val_SI": 419298.6129144029,
+          "is_set": false,
+          "unit": "joule / kilogram"
+        },
+        "T": {
+          "val": 38.120220913144806,
+          "val_SI": 311.2702209131448,
+          "is_set": false,
+          "unit": "degree_Celsius"
+        },
+        "T_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "T_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "kelvin"
+        },
+        "v": {
+          "val": 0.2091055769181228,
+          "val_SI": 0.2091055769181228,
+          "is_set": false,
+          "unit": "m3 / second"
+        },
+        "x": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "dimensionless"
+        },
+        "td_dew": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "td_bubble": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "m_ref": {
+          "is_set": true,
+          "unit": null,
+          "conn": "01",
+          "factor": 0.1,
+          "delta": 0
+        },
+        "p_ref": {},
+        "h_ref": {},
+        "T_ref": {},
+        "v_ref": {},
+        "vol": {
+          "val": 0.008986556182165595,
+          "val_SI": 0.008986556182165595,
+          "is_set": false,
+          "unit": "m3 / kilogram"
+        },
+        "s": {
+          "val": 2551.343413835764,
+          "val_SI": 2551.343413835764,
+          "is_set": false,
+          "unit": "joule / kelvin / kilogram"
+        },
+        "fluid": {
+          "val": {
+            "Air": 1.0
+          },
+          "is_set": [],
+          "engine": {
+            "Air": "CoolPropWrapper"
+          },
+          "back_end": {
+            "Air": null
+          }
+        },
+        "fluid_balance": {
+          "val": false,
+          "is_set": false
+        },
+        "Td_bp": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "delta_degree_Celsius"
+        },
+        "state": {
+          "val": NaN,
+          "is_set": false
+        }
+      }
+    },
+    "PowerConnection": {
+      "e01": {
+        "source": "generator",
+        "target": "grid",
+        "source_id": "power_out",
+        "target_id": "power",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "E": {
+          "val": 115.0,
+          "val_SI": 115000000.0,
+          "is_set": true,
+          "unit": "megawatt"
+        }
+      },
+      "e02": {
+        "source": "shaft",
+        "target": "generator",
+        "source_id": "power_out1",
+        "target_id": "power_in",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "E": {
+          "val": 118.55670103092784,
+          "val_SI": 118556701.03092785,
+          "is_set": false,
+          "unit": "megawatt"
+        }
+      },
+      "e11": {
+        "source": "turbine stage 1",
+        "target": "shaft",
+        "source_id": "power",
+        "target_id": "power_in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "E": {
+          "val": 55.02303396425221,
+          "val_SI": 55023033.96425221,
+          "is_set": false,
+          "unit": "megawatt"
+        }
+      },
+      "e12": {
+        "source": "turbine stage 2",
+        "target": "shaft",
+        "source_id": "power",
+        "target_id": "power_in2",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "E": {
+          "val": 63.53366706667564,
+          "val_SI": 63533667.06667564,
+          "is_set": false,
+          "unit": "megawatt"
+        }
+      },
+      "h01": {
+        "source": "heat",
+        "target": "heatcollection",
+        "source_id": "power",
+        "target_id": "power_in1",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "E": {
+          "val": 133.7804594816065,
+          "val_SI": 133780459.48160651,
+          "is_set": false,
+          "unit": "megawatt"
+        }
+      },
+      "h11": {
+        "source": "heatcollection",
+        "target": "cooler 1",
+        "source_id": "power_out1",
+        "target_id": "heat",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "E": {
+          "val": 66.28183214380336,
+          "val_SI": 66281832.143803366,
+          "is_set": false,
+          "unit": "megawatt"
+        }
+      },
+      "h12": {
+        "source": "heatcollection",
+        "target": "cooler 2",
+        "source_id": "power_out2",
+        "target_id": "heat",
+        "design_path": null,
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "printout": true,
+        "E": {
+          "val": 67.49862733780314,
+          "val_SI": 67498627.33780314,
+          "is_set": false,
+          "unit": "megawatt"
+        }
+      }
+    }
+  },
+  "Component": {
+    "Source": {
+      "cas": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "cas",
+        "char_warnings": true,
+        "bypass": false
+      },
+      "fresh air": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "fresh air",
+        "char_warnings": true,
+        "bypass": false
+      }
+    },
+    "SimpleHeatExchanger": {
+      "cooler 1": {
+        "design": [
+          "pr"
+        ],
+        "offdesign": [
+          "zeta"
+        ],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "cooler 1",
+        "char_warnings": true,
+        "bypass": false,
+        "power_connector_location": {
+          "val": "inlet",
+          "is_set": true
+        },
+        "Q": {
+          "val": 66.28183214380327,
+          "val_SI": 66281832.143803276,
+          "is_set": false,
+          "unit": "megawatt",
+          "is_var": false
+        },
+        "pr": {
+          "val": 0.98,
+          "val_SI": 0.98,
+          "is_set": true,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "dp": {
+          "val": 1.9886571932223627,
+          "val_SI": 198865.71932223625,
+          "is_set": false,
+          "unit": "bar",
+          "is_var": false
+        },
+        "zeta": {
+          "val": 341.63298835719746,
+          "val_SI": 341.63298835719746,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "D": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "L": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "ks": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "ks_HW": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "kA": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "watt / kelvin",
+          "is_var": false
+        },
+        "kA_char": {
+          "char_func": {
+            "x": [
+              0.0,
+              0.01084,
+              0.03655,
+              0.07779,
+              0.13389,
+              0.20417,
+              0.28796,
+              0.38458,
+              0.49337,
+              0.61364,
+              0.74473,
+              0.88595,
+              1.0,
+              1.19613,
+              1.36374,
+              1.53879,
+              1.72061,
+              1.90854,
+              2.10189,
+              2.29999,
+              2.50217,
+              2.70776,
+              2.91608,
+              3.0
+            ],
+            "y": [
+              0.01,
+              0.09598,
+              0.18995,
+              0.28191,
+              0.37185,
+              0.45974,
+              0.54557,
+              0.62932,
+              0.71098,
+              0.79053,
+              0.86796,
+              0.94324,
+              1.0,
+              1.0873,
+              1.15605,
+              1.22259,
+              1.28691,
+              1.34898,
+              1.40879,
+              1.46633,
+              1.52157,
+              1.5745,
+              1.62511,
+              1.645
+            ],
+            "extrapolate": false
+          },
+          "is_set": false,
+          "param": "m",
+          "char_params": {
+            "type": "rel",
+            "inconn": 0,
+            "outconn": 0
+          }
+        },
+        "Tamb": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "degree_Celsius",
+          "is_var": false
+        },
+        "dissipative": {
+          "val": null,
+          "is_set": false
+        },
+        "darcy_group": {},
+        "hw_group": {},
+        "kA_group": {},
+        "kA_char_group": {}
+      },
+      "cooler 2": {
+        "design": [
+          "pr"
+        ],
+        "offdesign": [
+          "zeta"
+        ],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "cooler 2",
+        "char_warnings": true,
+        "bypass": false,
+        "power_connector_location": {
+          "val": "inlet",
+          "is_set": true
+        },
+        "Q": {
+          "val": 67.49862733780313,
+          "val_SI": 67498627.33780313,
+          "is_set": false,
+          "unit": "megawatt",
+          "is_var": false
+        },
+        "pr": {
+          "val": 0.98,
+          "val_SI": 0.98,
+          "is_set": true,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "dp": {
+          "val": 0.20408163265306156,
+          "val_SI": 20408.163265306153,
+          "is_set": false,
+          "unit": "bar",
+          "is_var": false
+        },
+        "zeta": {
+          "val": 3.3707931919364373,
+          "val_SI": 3.3707931919364373,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "D": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "L": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "ks": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "ks_HW": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "kA": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "watt / kelvin",
+          "is_var": false
+        },
+        "kA_char": {
+          "char_func": {
+            "x": [
+              0.0,
+              0.01084,
+              0.03655,
+              0.07779,
+              0.13389,
+              0.20417,
+              0.28796,
+              0.38458,
+              0.49337,
+              0.61364,
+              0.74473,
+              0.88595,
+              1.0,
+              1.19613,
+              1.36374,
+              1.53879,
+              1.72061,
+              1.90854,
+              2.10189,
+              2.29999,
+              2.50217,
+              2.70776,
+              2.91608,
+              3.0
+            ],
+            "y": [
+              0.01,
+              0.09598,
+              0.18995,
+              0.28191,
+              0.37185,
+              0.45974,
+              0.54557,
+              0.62932,
+              0.71098,
+              0.79053,
+              0.86796,
+              0.94324,
+              1.0,
+              1.0873,
+              1.15605,
+              1.22259,
+              1.28691,
+              1.34898,
+              1.40879,
+              1.46633,
+              1.52157,
+              1.5745,
+              1.62511,
+              1.645
+            ],
+            "extrapolate": false
+          },
+          "is_set": false,
+          "param": "m",
+          "char_params": {
+            "type": "rel",
+            "inconn": 0,
+            "outconn": 0
+          }
+        },
+        "Tamb": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "degree_Celsius",
+          "is_var": false
+        },
+        "dissipative": {
+          "val": null,
+          "is_set": false
+        },
+        "darcy_group": {},
+        "hw_group": {},
+        "kA_group": {},
+        "kA_char_group": {}
+      }
+    },
+    "Generator": {
+      "generator": {
+        "design": [
+          "eta"
+        ],
+        "offdesign": [
+          "eta_char"
+        ],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "generator",
+        "char_warnings": true,
+        "bypass": false,
+        "eta": {
+          "val": 0.97,
+          "val_SI": 0.9699999999999999,
+          "is_set": true,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "delta_power": {
+          "val": 3.5567010309278517,
+          "val_SI": 3556701.030927852,
+          "is_set": false,
+          "unit": "megawatt",
+          "is_var": false
+        },
+        "eta_char": {
+          "char_func": {
+            "x": [
+              0.1,
+              0.345,
+              0.359,
+              0.383,
+              0.41,
+              0.432,
+              0.451,
+              0.504,
+              0.541,
+              0.6,
+              0.684,
+              0.805,
+              1.0,
+              1.7,
+              10.0
+            ],
+            "y": [
+              0.976,
+              0.989,
+              0.99,
+              0.991,
+              0.992,
+              0.993,
+              0.994,
+              0.995,
+              0.996,
+              0.997,
+              0.998,
+              0.999,
+              1.0,
+              0.999,
+              0.99
+            ],
+            "extrapolate": false
+          },
+          "is_set": false,
+          "param": null,
+          "char_params": {
+            "type": "rel",
+            "inconn": 0,
+            "outconn": 0
+          }
+        }
+      }
+    },
+    "PowerSink": {
+      "grid": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "grid",
+        "char_warnings": true,
+        "bypass": false
+      }
+    },
+    "PowerSource": {
+      "heat": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "heat",
+        "char_warnings": true,
+        "bypass": false
+      }
+    },
+    "PowerBus": {
+      "heatcollection": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "heatcollection",
+        "char_warnings": true,
+        "bypass": false,
+        "num_in": {
+          "val": 1,
+          "is_set": true
+        },
+        "num_out": {
+          "val": 2,
+          "is_set": true
+        }
+      },
+      "shaft": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "shaft",
+        "char_warnings": true,
+        "bypass": false,
+        "num_in": {
+          "val": 2,
+          "is_set": true
+        },
+        "num_out": {
+          "val": 1,
+          "is_set": true
+        }
+      }
+    },
+    "Sink": {
+      "power plant outlet": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "power plant outlet",
+        "char_warnings": true,
+        "bypass": false
+      },
+      "power plant outlet source": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "power plant outlet source",
+        "char_warnings": true,
+        "bypass": false
+      }
+    },
+    "Turbine": {
+      "turbine stage 1": {
+        "design": [
+          "eta_s"
+        ],
+        "offdesign": [
+          "eta_s_char"
+        ],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "turbine stage 1",
+        "char_warnings": true,
+        "bypass": false,
+        "P": {
+          "val": -55.023033964252136,
+          "val_SI": -55023033.96425214,
+          "is_set": false,
+          "unit": "megawatt",
+          "is_var": false
+        },
+        "pr": {
+          "val": 0.10471717530876153,
+          "val_SI": 0.10471717530876153,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "dp": {
+          "val": 87.24012083524241,
+          "val_SI": 8724012.08352424,
+          "is_set": false,
+          "unit": "bar",
+          "is_var": false
+        },
+        "eta_s": {
+          "val": 0.85,
+          "val_SI": 0.8500000000000002,
+          "is_set": true,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "eta_s_char": {
+          "char_func": {
+            "x": [
+              0.0,
+              0.1905,
+              0.381,
+              0.5714,
+              0.7619,
+              0.9524,
+              1.0,
+              1.1429,
+              1.3333,
+              1.5238,
+              1.7143,
+              1.9048
+            ],
+            "y": [
+              0.0,
+              0.3975,
+              0.6772,
+              0.8581,
+              0.9593,
+              0.9985,
+              1.0,
+              0.9875,
+              0.9357,
+              0.8464,
+              0.7219,
+              0.5643
+            ],
+            "extrapolate": false
+          },
+          "is_set": false,
+          "param": "m",
+          "char_params": {
+            "type": "rel",
+            "inconn": 0,
+            "outconn": 0
+          }
+        },
+        "cone": {
+          "val": NaN,
+          "is_set": false
+        }
+      },
+      "turbine stage 2": {
+        "design": [
+          "eta_s"
+        ],
+        "offdesign": [
+          "eta_s_char",
+          "cone"
+        ],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "turbine stage 2",
+        "char_warnings": true,
+        "bypass": false,
+        "P": {
+          "val": -63.53366706667564,
+          "val_SI": -63533667.06667564,
+          "is_set": false,
+          "unit": "megawatt",
+          "is_var": false
+        },
+        "pr": {
+          "val": 0.101325,
+          "val_SI": 0.101325,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "dp": {
+          "val": 8.98675,
+          "val_SI": 898675.0,
+          "is_set": false,
+          "unit": "bar",
+          "is_var": false
+        },
+        "eta_s": {
+          "val": 0.9,
+          "val_SI": 0.9,
+          "is_set": true,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "eta_s_char": {
+          "char_func": {
+            "x": [
+              0.0,
+              0.1905,
+              0.381,
+              0.5714,
+              0.7619,
+              0.9524,
+              1.0,
+              1.1429,
+              1.3333,
+              1.5238,
+              1.7143,
+              1.9048
+            ],
+            "y": [
+              0.0,
+              0.3975,
+              0.6772,
+              0.8581,
+              0.9593,
+              0.9985,
+              1.0,
+              0.9875,
+              0.9357,
+              0.8464,
+              0.7219,
+              0.5643
+            ],
+            "extrapolate": false
+          },
+          "is_set": false,
+          "param": "m",
+          "char_params": {
+            "type": "rel",
+            "inconn": 0,
+            "outconn": 0
+          }
+        },
+        "cone": {
+          "val": NaN,
+          "is_set": false
+        }
+      }
+    },
+    "Pipe": {
+      "well": {
+        "design": [],
+        "offdesign": [],
+        "local_design": false,
+        "local_offdesign": false,
+        "design_path": null,
+        "printout": true,
+        "fkt_group": "well",
+        "char_warnings": true,
+        "bypass": false,
+        "power_connector_location": {
+          "val": NaN,
+          "is_set": false
+        },
+        "Q": {
+          "val": 0.0,
+          "val_SI": 0.0,
+          "is_set": true,
+          "unit": "megawatt",
+          "is_var": false
+        },
+        "pr": {
+          "val": 0.9943285966111783,
+          "val_SI": 0.9943285966111783,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "dp": {
+          "val": 0.5671403388821706,
+          "val_SI": 56714.03388821706,
+          "is_set": false,
+          "unit": "bar",
+          "is_var": false
+        },
+        "zeta": {
+          "val": 14417.99053102213,
+          "val_SI": 14417.99053102213,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "D": {
+          "val": 0.25,
+          "val_SI": 0.25,
+          "is_set": true,
+          "unit": "meter",
+          "is_var": false
+        },
+        "L": {
+          "val": 1055.0,
+          "val_SI": 1055.0,
+          "is_set": true,
+          "unit": "meter",
+          "is_var": false
+        },
+        "ks": {
+          "val": 4e-05,
+          "val_SI": 4e-05,
+          "is_set": true,
+          "unit": "meter",
+          "is_var": false
+        },
+        "ks_HW": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "dimensionless",
+          "is_var": false
+        },
+        "kA": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "watt / kelvin",
+          "is_var": false
+        },
+        "kA_char": {
+          "char_func": {
+            "x": [
+              0.0,
+              0.01084,
+              0.03655,
+              0.07779,
+              0.13389,
+              0.20417,
+              0.28796,
+              0.38458,
+              0.49337,
+              0.61364,
+              0.74473,
+              0.88595,
+              1.0,
+              1.19613,
+              1.36374,
+              1.53879,
+              1.72061,
+              1.90854,
+              2.10189,
+              2.29999,
+              2.50217,
+              2.70776,
+              2.91608,
+              3.0
+            ],
+            "y": [
+              0.01,
+              0.09598,
+              0.18995,
+              0.28191,
+              0.37185,
+              0.45974,
+              0.54557,
+              0.62932,
+              0.71098,
+              0.79053,
+              0.86796,
+              0.94324,
+              1.0,
+              1.0873,
+              1.15605,
+              1.22259,
+              1.28691,
+              1.34898,
+              1.40879,
+              1.46633,
+              1.52157,
+              1.5745,
+              1.62511,
+              1.645
+            ],
+            "extrapolate": false
+          },
+          "is_set": false,
+          "param": "m",
+          "char_params": {
+            "type": "rel",
+            "inconn": 0,
+            "outconn": 0
+          }
+        },
+        "Tamb": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "degree_Celsius",
+          "is_var": false
+        },
+        "dissipative": {
+          "val": null,
+          "is_set": false
+        },
+        "darcy_group": {},
+        "hw_group": {},
+        "kA_group": {},
+        "kA_char_group": {},
+        "Q_ohc_group_surface": {},
+        "Q_ohc_group_subsurface": {},
+        "insulation_thickness": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "insulation_tc": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "watt / kelvin / meter",
+          "is_var": false
+        },
+        "material": {
+          "val": "Steel",
+          "is_set": false
+        },
+        "pipe_thickness": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "environment_media": {
+          "val": "soil",
+          "is_set": false
+        },
+        "wind_velocity": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter / second",
+          "is_var": false
+        },
+        "pipe_depth": {
+          "val": NaN,
+          "val_SI": NaN,
+          "is_set": false,
+          "unit": "meter",
+          "is_var": false
+        },
+        "flow_speed": {
+          "val": 4.237482818547646,
+          "val_SI": 4.237482818547646,
+          "is_set": false,
+          "unit": "meter / second",
+          "is_var": false
+        },
+        "flow_speed_group": {}
+      }
+    }
+  },
+  "Bus": {}
+}
