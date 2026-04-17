@@ -805,23 +805,30 @@ class GeoStorage:
         simulation_path = os.path.join(self.working_dir_loc, self.current_simulation_title + ".DATA")
 
         if self.keep_ecl_logs == True:
-            log_file_path = os.path.join(self.working_dir_loc, f"log_{self.current_simulation_title}_{tstep}_{iter_step}.txt")
+            log_file_path = os.path.join(self.working_dir_loc,
+                                         f"log_{self.current_simulation_title}_{tstep}_{iter_step}.txt")
         else:
             log_file_path = None
+        sim_args = getattr(self, 'simulator_args')
+        mpi_cores = int(getattr(self, 'mpi_cores', 0))
+        def to_wsl(path):
+            p = path.replace("\\", "/")
+            drive = p[0].lower()
+            remainder = p[2:].lstrip("/")
+            return f"/mnt/{drive}/{remainder}"
 
         if os.name == 'nt':
             # convert Windows path to WSL path
-            simulation_path_wsl = simulation_path.replace("\\", "/")
-            drive = simulation_path_wsl[0].lower()
-            simulation_path_wsl = f"/mnt/{drive}/{simulation_path_wsl[3:]}"
-
-            run_cmd = f"{self.simulator_path} {simulation_path_wsl} --enable-opm-rst-file=true --parsing-strictness=low"
+            simulation_path_wsl = to_wsl(simulation_path)
+            sim_args_str = " ".join(sim_args)
+            if mpi_cores > 1:
+                run_cmd = (f"mpirun -np {mpi_cores} {self.simulator_path} "f"{simulation_path_wsl} {sim_args_str}")
+            else:
+                run_cmd = f"{self.simulator_path} {simulation_path_wsl} {sim_args_str}"
 
             if log_file_path is not None:
-                log_file_path_wsl = log_file_path.replace("\\", "/")
-                drive = log_file_path_wsl[0].lower()
-                log_file_path_wsl = f"/mnt/{drive}/{log_file_path_wsl[3:]}"
-                run_cmd = run_cmd + f" > {log_file_path_wsl} 2>&1"
+                log_wsl = to_wsl(log_file_path)
+                run_cmd = run_cmd + f" > {log_wsl} 2>&1"
             else:
                 # silence output when logs disabled
                 run_cmd = run_cmd + " > /dev/null 2>&1"
@@ -830,7 +837,10 @@ class GeoStorage:
 
          # linux execution
         if os.name == "posix":
-            run_cmd = [self.simulator_path, simulation_path, "--enable-opm-rst-file=True"]
+            if mpi_cores > 1:
+                run_cmd = (["mpirun", "-np", str(mpi_cores), self.simulator_path, simulation_path] + sim_args)
+            else:
+                run_cmd = [self.simulator_path, simulation_path] + sim_args
 
             if log_file_path is not None:
                 with open(log_file_path, "w", encoding="utf-8") as logf:
