@@ -407,38 +407,43 @@ class GeoStorage:
         file_ending_unform = ".X"
         file_ending_form = ".F"
         temp_nr_str = ""
-
-        if tstep == 0:
-            temp_nr_str = "0001"
+        restart_tstep = tstep - 1
+        if restart_tstep < 0:
+            # nothing to delete yet; the lag means we skip on the first call
+            restart_suffixes = ()
         else:
-            if tstep > -1:
-                tstep + 1
-
-            if (tstep + 1) <= 10:
-                temp_nr_str = "000" + str(tstep)
-            elif (tstep + 1) <= 100:
-                temp_nr_str = "00" + str(tstep)
-            elif (tstep + 1) <= 1000:
-                temp_nr_str = "0" + str(tstep)
+            if restart_tstep == 0:
+                temp_nr_str = "0001"
             else:
-                temp_nr_str =  str(tstep)
+                if (restart_tstep + 1) <= 10:
+                    temp_nr_str = "000" + str(restart_tstep)
+                elif (restart_tstep + 1) <= 100:
+                    temp_nr_str = "00" + str(restart_tstep)
+                elif (restart_tstep + 1) <= 1000:
+                    temp_nr_str = "0" + str(restart_tstep)
+                else:
+                    temp_nr_str = str(restart_tstep)
 
-        file_ending_unform += temp_nr_str
-        file_ending_form += temp_nr_str
+            file_ending_unform += temp_nr_str
+            file_ending_form += temp_nr_str
+            restart_suffixes = (file_ending_unform, file_ending_form)
 
-        #if tstep > -1:
-            #print('Attempting to delete file: *', file_ending, ' in timestep ', tstep)
         termination_list = [
             ".DBG", ".dbprtx", ".ECLEND", ".ECLRUN", ".GRID", ".EGRID", ".FGRID",
             ".h5", ".INIT", ".FINIT", ".INSPEC", ".FINSPEC", ".LOG", ".MSG",
             ".RSSPEC", ".FRSSPEC", ".SMSPEC", ".FSMSPEC", ".UNSMRY", ".FUNSMRY",
-            ".PRTX", ".RTEMSG",".RTELOG",".CFE", ".default", ".session", ".sessionlock"
+            ".PRTX", ".RTEMSG", ".RTELOG", ".CFE", ".default", ".session", ".sessionlock"
         ]
 
         for filename in os.listdir(self.working_dir_loc):
             if any(filename.endswith(ext) for ext in termination_list):
-                file_path = os.path.join(self.working_dir_loc, filename)
-                util.delete_file(file_path)
+                util.delete_file(os.path.join(self.working_dir_loc, filename))
+
+        # delete restart files (.X####, .F####) lagged by one timestep
+        if restart_suffixes:
+            for filename in os.listdir(self.working_dir_loc):
+                if filename.endswith(restart_suffixes):
+                    util.delete_file(os.path.join(self.working_dir_loc, filename))
 
     def execute_ecl(self, tstep, iter_step, op_mode):
         '''
