@@ -11,7 +11,7 @@ import os
 import json
 import logging
 from tespy.tools.logger import logger
-from .powerplant_template import PowerPlant
+from .powerplant_template import PowerPlant, H2PowerPlant
 from tespy import __version__
 print("TESPy version:", __version__)
 
@@ -82,8 +82,58 @@ class PowerPlantCoupling:
         data = deepcopy(self.config["discharge"])
         data["path"] = os.path.join(self.wdir, data["path"])
         discharge_path = os.path.join(data["path"], "export.json")
+
+        with open(discharge_path, "r") as f:
+            model_data = json.load(f)
+
         self.discharge_model = PowerPlant.from_json(discharge_path, data)
-        self.discharge_model.nw.solve("design", init_path=self.discharge_model._design_path)
+
+        if "01" in model_data["Connection"]["Connection"]:
+            if "H2" in model_data["Connection"]["Connection"]["01"]["fluid"]["val"]:
+                self.discharge_model = H2PowerPlant.from_json(discharge_path, data)
+                nw = self.discharge_model.nw
+                c05 = nw.get_conn("05")
+                c05_T = c05.T.val
+                c05.set_attr(T=None)
+
+                comb = nw.get_comp("combustion")
+                comb.set_attr(lamb=3)
+
+                c08 = nw.get_conn("08")
+                c08.set_attr(T=500)
+
+                evap = nw.get_comp("evaporator")
+                evap_ttd_l = evap.ttd_l.val
+                evap.set_attr(ttd_l=None)
+
+                c01 = nw.get_conn("01")
+                c01.set_attr(m=5)           # fix fuel mass flow (or H2 flow) for startup
+
+                e01 = nw.get_conn("e01")
+                e01_E = e01.E.val
+                e01.set_attr(E=None)   # now the bus sets the power
+
+                well = nw.get_comp("well")
+                well_ks = well.ks.val
+                well.set_attr(dp=2, ks=None)
+
+                nw.solve('design')
+
+                c05.set_attr(T=c05_T)
+                comb.set_attr(lamb=None)
+
+                c08.set_attr(T=None)
+                evap.set_attr(ttd_l=evap_ttd_l)
+
+                c01.set_attr(m=None)           # fix fuel mass flow (or H2 flow) for startup
+                e01.set_attr(E=e01_E)   # now the bus sets the power
+
+                well.set_attr(dp=None, ks=well_ks)
+                nw.solve('design')
+
+        else:
+            self.discharge_model.nw.solve("design", init_path=self.discharge_model._stable_solution)
+
         self.discharge_model.nw.set_attr(iterinfo=False)
         self._make_power_plant_layouts()
 

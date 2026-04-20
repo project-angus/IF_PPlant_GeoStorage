@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=80.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "if-pplant-geostorage"
 version = "0.1.0"
@@ -9,5 +5,5 @@ description = "Interface for coupled simulation of power plant and geological st
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "tespy==0.9.14",
+    "tespy==0.9.15",
 ]
