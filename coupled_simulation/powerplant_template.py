@@ -197,3 +197,25 @@ class PowerPlant(ModelTemplate):
                     return False
 
         return True
+
+
+class H2PowerPlant(PowerPlant):
+
+    def _set_customs(self, specifications):
+        super()._set_customs(specifications)
+        if "ambient_pressure" in specifications:
+            p_amb = specifications["ambient_pressure"]
+            [c.set_attr(p=p_amb) for c in self.nw.get_conn(["03", "10"])]
+        if "ambient_temperature" in specifications:
+            T_amb = specifications["ambient_temperature"]
+            [c.set_attr(T=T_amb) for c in self.nw.get_conn(["03", "31"])]
+
+    def _get_customs(self, parameter):
+        value = super()._get_customs(parameter)
+        if value is None:
+            if parameter == "ambient_pressure":
+                return self.nw.get_conn("03").p.val
+            elif parameter == "ambient_temperature":
+                return self.nw.get_conn("03").T.val
+        else:
+            return value
