@@ -192,84 +192,92 @@ class GeoStorage:
     def rearrange_rsm_data_array_opm(self, rsm_lines):
         """
         Function to parse OPM  .RSM output with multiple 'SUMMARY OF RUN' blocks per timestep.
+        OPM writes multiple 'SUMMARY OF RUN' blocks, each with up to ~10 columns. Each block has 5 rows.
         Return two strings (header_line, data_line) separated by tabs so downstream
         """
         date_regex = re.compile(r'\d{1,2}-[A-Z]{3}-\d{4}', re.IGNORECASE)
         n = len(rsm_lines)
         i = 0
         blocks = []
+        tab_size = 16  # standard width for output?
 
         # Walk lines and capture blocks starting at header "DATE ..."
         while i < n:
             line = rsm_lines[i]
             if line.strip().startswith('DATE'):
-                header_line = line.rstrip('\n')
-                unit_line = rsm_lines[i+1].rstrip('\n') if i+1 < n else ''
-                well_line = rsm_lines[i+2].rstrip('\n') if i+2 < n else ''
+                header_line = line.expandtabs(tab_size).rstrip('\n')
+                unit_line = rsm_lines[i + 1].expandtabs(tab_size).rstrip('\n') if i + 1 < n else ''
+                well_line = rsm_lines[i + 2].expandtabs(tab_size).rstrip('\n') if i + 2 < n else ''
                 # find first data line after the header chunk (line that matches date pattern)
                 j = i + 3
                 data_line = None
                 while j < n:
                     if date_regex.search(rsm_lines[j]):
-                        data_line = rsm_lines[j].rstrip('\n')
+                        data_line = rsm_lines[j].expandtabs(tab_size).rstrip('\n')
                         break
                     j += 1
+
                 if data_line is not None:
                     blocks.append((header_line, unit_line, well_line, data_line))
                     i = j + 1
                     continue
             i += 1
 
-        # Merge blocks into unified header and data
-        combined_labels = []
-        combined_data = []
-        date_value = None
+        all_headers = []
+        all_units = []
+        all_wells = []
+        all_data = []
+        date_value = 'n.a.'
 
+        # map data based on physical character alignment
         for (hdr, unit, wells, data) in blocks:
             # normalize and split on two-or-more spaces to keep column groups
-            hdr_tokens = re.split(r'\s{2,}', hdr.strip())
-            wells_tokens = re.split(r'\s{2,}', wells.strip())
-            data_tokens = re.split(r'\s{2,}', data.strip())
+            h_matches = list(re.finditer(r'\S+', hdr))
+            if not h_matches:
+                continue
 
-            # remove any leading page numbers such as '1' that sometimes prefix lines
-            if hdr_tokens and re.fullmatch(r'\d+', hdr_tokens[0].strip()):
-                hdr_tokens = hdr_tokens[1:]
-            if wells_tokens and re.fullmatch(r'\d+', wells_tokens[0].strip()):
-                wells_tokens = wells_tokens[1:]
-            if data_tokens and re.fullmatch(r'\d+', data_tokens[0].strip()):
-                data_tokens = data_tokens[1:]
+            def get_closest_idx(match_obj):
+                center = (match_obj.start() + match_obj.end()) / 2
+                best_idx = 0
+                min_dist = float('inf')
+                for idx, h_m in enumerate(h_matches):
+                    h_center = (h_m.start() + h_m.end()) / 2
+                    if abs(center - h_center) < min_dist:
+                        min_dist = abs(center - h_center)
+                        best_idx = idx
+                return best_idx
 
-            # first token of data_tokens should be date string
-            if date_value is None and date_regex.search(data_tokens[0]):
-                date_value = data_tokens[0].strip()
-            # safety: ensure lengths align (hdr tokens minus DATE vs wells tokens)
-            # hdr_tokens often begin with 'DATE', so skip it
-            hdr_vars = hdr_tokens[1:] if hdr_tokens and hdr_tokens[0].upper().startswith('DATE') else hdr_tokens
+            block_headers = [m.group() for m in h_matches]
+            block_units = ['-'] * len(block_headers)
+            block_wells = ['-'] * len(block_headers)
+            block_data = ['0.0'] * len(block_headers)
 
-            # If lengths mismatch, try a forgiving approach: zip as far as possible
-            for idx, var in enumerate(hdr_vars):
-                try:
-                    wellname = wells_tokens[idx].strip()
-                except IndexError:
-                    # no matching well token, fallback to index-based name
-                    wellname = f'COL{idx}'
-                label = f"{var.strip()}_{wellname}"
-                combined_labels.append(label)
+            for m in re.finditer(r'\S+', unit):
+                block_units[get_closest_idx(m)] = m.group()
+            for m in re.finditer(r'\S+', wells):
+                block_wells[get_closest_idx(m)] = m.group()
+            for m in re.finditer(r'\S+', data):
+                val = m.group()
+                block_data[get_closest_idx(m)] = val
+                if date_regex.match(val) and date_value == 'n.a.':
+                    date_value = val
 
-                # get corresponding data token
-                try:
-                    val = data_tokens[idx+1].strip()  # +1 because data_tokens[0] is date
-                except Exception:
-                    val = 'n.a.'
-                combined_data.append(val)
+            # append to master lists, skipping redundant 'DATE' columns
+            for idx, h_var in enumerate(block_headers):
+                if h_var.upper() == 'DATE' and len(all_headers) > 0:
+                    continue
+                all_headers.append(h_var)
+                all_units.append(block_units[idx])
+                all_wells.append(block_wells[idx])
+                all_data.append(block_data[idx])
 
+        if all_data and date_value != 'n.a.':
+            all_data[0] = date_value
 
-        if date_value is None:
-            date_value = 'n.a.'
-
-        header_line = 'DATE\t' + '\t'.join(combined_labels)
-        data_line = date_value + '\t' + '\t'.join(combined_data)
-        return [header_line + '\n', data_line + '\n']
+        return ['\t'.join(all_headers) + '\n',
+                '\t'.join(all_units) + '\n',
+                '\t'.join(all_wells) + '\n',
+                '\t'.join(all_data) + '\n']
 
     def rework_ecl_data(self, timestep, timestepsize, flowrate, op_mode):
         '''
@@ -399,38 +407,43 @@ class GeoStorage:
         file_ending_unform = ".X"
         file_ending_form = ".F"
         temp_nr_str = ""
-
-        if tstep == 0:
-            temp_nr_str = "0001"
+        restart_tstep = tstep - 1
+        if restart_tstep < 0:
+            # nothing to delete yet; the lag means we skip on the first call
+            restart_suffixes = ()
         else:
-            if tstep > -1:
-                tstep + 1
-
-            if (tstep + 1) <= 10:
-                temp_nr_str = "000" + str(tstep)
-            elif (tstep + 1) <= 100:
-                temp_nr_str = "00" + str(tstep)
-            elif (tstep + 1) <= 1000:
-                temp_nr_str = "0" + str(tstep)
+            if restart_tstep == 0:
+                temp_nr_str = "0001"
             else:
-                temp_nr_str =  str(tstep)
+                if (restart_tstep + 1) <= 10:
+                    temp_nr_str = "000" + str(restart_tstep)
+                elif (restart_tstep + 1) <= 100:
+                    temp_nr_str = "00" + str(restart_tstep)
+                elif (restart_tstep + 1) <= 1000:
+                    temp_nr_str = "0" + str(restart_tstep)
+                else:
+                    temp_nr_str = str(restart_tstep)
 
-        file_ending_unform += temp_nr_str
-        file_ending_form += temp_nr_str
+            file_ending_unform += temp_nr_str
+            file_ending_form += temp_nr_str
+            restart_suffixes = (file_ending_unform, file_ending_form)
 
-        #if tstep > -1:
-            #print('Attempting to delete file: *', file_ending, ' in timestep ', tstep)
         termination_list = [
             ".DBG", ".dbprtx", ".ECLEND", ".ECLRUN", ".GRID", ".EGRID", ".FGRID",
             ".h5", ".INIT", ".FINIT", ".INSPEC", ".FINSPEC", ".LOG", ".MSG",
             ".RSSPEC", ".FRSSPEC", ".SMSPEC", ".FSMSPEC", ".UNSMRY", ".FUNSMRY",
-            ".PRTX", ".RTEMSG",".RTELOG",".CFE", ".default", ".session", ".sessionlock"
+            ".PRTX", ".RTEMSG", ".RTELOG", ".CFE", ".default", ".session", ".sessionlock"
         ]
 
         for filename in os.listdir(self.working_dir_loc):
             if any(filename.endswith(ext) for ext in termination_list):
-                file_path = os.path.join(self.working_dir_loc, filename)
-                util.delete_file(file_path)
+                util.delete_file(os.path.join(self.working_dir_loc, filename))
+
+        # delete restart files (.X####, .F####) lagged by one timestep
+        if restart_suffixes:
+            for filename in os.listdir(self.working_dir_loc):
+                if filename.endswith(restart_suffixes):
+                    util.delete_file(os.path.join(self.working_dir_loc, filename))
 
     def execute_ecl(self, tstep, iter_step, op_mode):
         '''
@@ -468,37 +481,26 @@ class GeoStorage:
         :returns: returns a tuple of float values containing pressure and actual storage flow rate
         '''
 
-        #first read the results file
-        #if not current_op_mode == 'init':
-        #    filename = self.working_dir_loc + self.simulation_title + '.RSM'
-        #else:
-        #    filename = self.working_dir_loc + self.simulation_title + '_init.RSM'
         filename = os.path.join(self.working_dir_loc, self.current_simulation_title + '.RSM')
         results = util.get_file(filename)
-        #print(results)
+
         #sort the rsm data to a more uniform dataset
-        # reorderd_rsm_data = self.rearrangeRSMDataArray(results)
         if self.simulator == 'e300' or self.simulator == 'ECLIPSE':
             reorderd_rsm_data = self.rearrange_rsm_data_array(results)
+            well_results = util.contract_data_array(reorderd_rsm_data)
+            entry_count_temp = 4 if self.simulator == 'e300' else 5
 
         elif self.simulator == 'OPM':
-            reorderd_rsm_data = self.rearrange_rsm_data_array_opm(results)
+            raw_opm_data = self.rearrange_rsm_data_array_opm(results)
+            # bypass contract_data_array, manually split the 4 clean tab-separated rows
+            well_results = [row.rstrip('\n').split('\t') for row in raw_opm_data]
+            entry_count_temp = 4  # building 4 rows (Headers, Units, Wells, Data)
 
-        well_results = util.contract_data_array(reorderd_rsm_data)
+        else:
+            print(f"ERROR: Simulator '{self.simulator}' not recognised.")
+            return [0.0, 0.0]
 
-        # for OPM case, need extra row
-        if len(well_results) == 2:
-            # insert fake "units" line between header and first data
-            well_results.insert(1, ['-' for _ in well_results[0]])
-
-        # check number of data entries in well_results:
-        entry_count_temp = 0
-        if self.simulator == 'e300':
-            entry_count_temp = 4
-        elif self.simulator == 'ECLIPSE':
-            entry_count_temp = 5
-        elif self.simulator == 'OPM':
-            entry_count_temp = 0
+        # check for truncated or overly long data lines in the summary file
         values = len(well_results) - entry_count_temp
         if values > 1:
             print('Warning: possible loss of data, too many data lines in RSM file')
@@ -510,7 +512,6 @@ class GeoStorage:
         well_names = []
         well_names_loc = []
         flowrate_actual = 0.0
-        pressure_actual = 0.0
 
         # get well pressures
         pressure_keyword = 'WBHP'
@@ -519,6 +520,8 @@ class GeoStorage:
         for i in bhp_positions:
             well_pressures.append(float(well_results[-1][i]))
             well_names.append(well_results[2][i])
+
+            # catch zero pressures and default to BHP limits (e.g. well shut-in or dropped out)
             if well_pressures[-1] == 0.0:
                 print('Problem: well pressure for well ', well_names[-1], ' is zero. Setting to corresponding BHP limit' )
                 bhp_limits_well = self.get_well_bhp_limits(well_names[-1])
@@ -530,17 +533,15 @@ class GeoStorage:
                     print('Problem: could not determine operational mode, assuming injection')
                     well_pressures[-1] = bhp_limits_well[1]
 
-
         # now get well flow rates
-        if current_op_mode == 'discharging': #negative flow rates
-            #get all positions of WGPR entries in well_results
+        if current_op_mode == 'discharging':  # negative flow rates
             flow_keyword = 'WGPR'
             flow_positions = util.get_string_positions(well_results[0], flow_keyword)
             for i in flow_positions:
                 well_flowrates_days.append(float(well_results[-1][i]))
                 well_names_loc.append(well_results[2][i])
 
-        elif current_op_mode == 'charging': #positive flow rates
+        elif current_op_mode == 'charging':  # positive flow rates
             flow_keyword = 'WGIR'
             flow_positions = util.get_string_positions(well_results[0], flow_keyword)
             for i in flow_positions:
@@ -566,29 +567,31 @@ class GeoStorage:
                         if well_names_loc[j] == target_str:
                             correct_idx.append(j)
             #sort entries in well_flowrates based on correct_idx
-            well_flowrates_temp = well_flowrates_days
-            for i in correct_idx:
-                well_flowrates_days[i] = well_flowrates_temp[i]
+            well_flowrates_temp = well_flowrates_days.copy()
+            for i, idx in enumerate(correct_idx):
+                well_flowrates_days[i] = well_flowrates_temp[idx]
 
-            #calculate total flowrate
-            #maybe add timestep dependence (only needed if more than one per call)?
             #change unit of flowrates to sm3/s from sm3/d
             for i in range(len(well_flowrates_days)):
                 well_flowrates.append(well_flowrates_days[i] / 60.0 / 60.0 / 24.0)
 
-
             flowrate_actual = sum(well_flowrates)
 
-            if flowrate_actual > 0.0 :
+            if flowrate_actual > 0.0:
                 #calculate average pressure
                 pressure_actual = 0.0
                 for i in range(len(well_pressures)):
                     pressure_actual += well_pressures[i] * well_flowrates[i]
                 pressure_actual = pressure_actual / flowrate_actual
             else:
+                #fallback to simple average if no flow
                 pressure_actual = sum(well_pressures) / float(len(well_pressures))
         else:
-            pressure_actual = sum(well_pressures) / float(len(well_pressures))
+            # shut-in state: simple average of well pressures
+            if len(well_pressures) > 0:
+                pressure_actual = sum(well_pressures) / float(len(well_pressures))
+            else:
+                pressure_actual = 0.0
 
         return [pressure_actual, flowrate_actual]
 
@@ -802,23 +805,30 @@ class GeoStorage:
         simulation_path = os.path.join(self.working_dir_loc, self.current_simulation_title + ".DATA")
 
         if self.keep_ecl_logs == True:
-            log_file_path = os.path.join(self.working_dir_loc, f"log_{self.current_simulation_title}_{tstep}_{iter_step}.txt")
+            log_file_path = os.path.join(self.working_dir_loc,
+                                         f"log_{self.current_simulation_title}_{tstep}_{iter_step}.txt")
         else:
             log_file_path = None
+        sim_args = getattr(self, 'simulator_args')
+        mpi_cores = int(getattr(self, 'mpi_cores', 0))
+        def to_wsl(path):
+            p = path.replace("\\", "/")
+            drive = p[0].lower()
+            remainder = p[2:].lstrip("/")
+            return f"/mnt/{drive}/{remainder}"
 
         if os.name == 'nt':
             # convert Windows path to WSL path
-            simulation_path_wsl = simulation_path.replace("\\", "/")
-            drive = simulation_path_wsl[0].lower()
-            simulation_path_wsl = f"/mnt/{drive}/{simulation_path_wsl[3:]}"
-
-            run_cmd = f"{self.simulator_path} {simulation_path_wsl} --enable-opm-rst-file=true --parsing-strictness=low"
+            simulation_path_wsl = to_wsl(simulation_path)
+            sim_args_str = " ".join(sim_args)
+            if mpi_cores > 1:
+                run_cmd = (f"mpirun -np {mpi_cores} {self.simulator_path} "f"{simulation_path_wsl} {sim_args_str}")
+            else:
+                run_cmd = f"{self.simulator_path} {simulation_path_wsl} {sim_args_str}"
 
             if log_file_path is not None:
-                log_file_path_wsl = log_file_path.replace("\\", "/")
-                drive = log_file_path_wsl[0].lower()
-                log_file_path_wsl = f"/mnt/{drive}/{log_file_path_wsl[3:]}"
-                run_cmd = run_cmd + f" > {log_file_path_wsl} 2>&1"
+                log_wsl = to_wsl(log_file_path)
+                run_cmd = run_cmd + f" > {log_wsl} 2>&1"
             else:
                 # silence output when logs disabled
                 run_cmd = run_cmd + " > /dev/null 2>&1"
@@ -827,7 +837,10 @@ class GeoStorage:
 
          # linux execution
         if os.name == "posix":
-            run_cmd = [self.simulator_path, simulation_path, "--enable-opm-rst-file=True"]
+            if mpi_cores > 1:
+                run_cmd = (["mpirun", "-np", str(mpi_cores), self.simulator_path, simulation_path] + sim_args)
+            else:
+                run_cmd = [self.simulator_path, simulation_path] + sim_args
 
             if log_file_path is not None:
                 with open(log_file_path, "w", encoding="utf-8") as logf:
