@@ -1,0 +1,20 @@
+{
+	"simulator": "OPM",
+	"simulator_path": "flow",
+	"simulation_title": "GAUSSIAN_ANTICLINE_CO2_WELL_FLANK",
+	"restart_id": 0,
+	"retain_ecl_logs": "False",
+	"well_names": ["Well"],
+	"well_depths": [1635],
+	"well_lower_BHP": [70],
+	"well_upper_BHP": [300],
+	"reservoir_compartments": 1,
+	"surface_density": 1.868433,
+	"mpi_cores": 2,
+	"simulator_args": [
+        "--enable-opm-rst-file=true",
+        "--parsing-strictness=low",
+        "--enable-esmry=true",
+        "--enable-terminal-output=true"
+    ]
+}

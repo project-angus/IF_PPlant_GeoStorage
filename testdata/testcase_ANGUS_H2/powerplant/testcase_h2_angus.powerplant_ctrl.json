@@ -1,0 +1,104 @@
+{
+	"general": {
+		"grid_num": 8,
+		"ambient temperature": 20,
+		"ambient pressure": 1,
+		"gasconstant": 4124.2
+	},
+	"storage": {
+		"well_num": 9,
+		"well_depth": 720,
+		"well_diameter": 0.3,
+		"well_roughness": 4e-5,
+		"bh_pressure_loss_char_compression": {
+			"x": [0, 8.889, 26.667, 35.556, 44.444, 53.333, 62.222, 71.111],
+			"y": [0, 1.49417, 4.51392, 6.0073, 7.48338, 8.94233, 10.38356, 11.80667]
+		},
+		"bh_pressure_loss_char_expansion": {
+			"x": [0, 8.889, 17.778, 26.667, 35.556, 44.444, 53.333, 62.222, 71.111],
+			"y": [0, 1.2147, 2.4458, 3.6918, 4.9538, 6.2328, 7.5307, 8.8493, 10.1903]
+		},
+		"pressure_min": 20,
+		"pressure_max": 130,
+		"temperature": 30,
+		"initial_pressure": 72,
+		"rel_pressure_loss_per_step": 0,
+		"delta mass": 829.44e6,
+		"delta pressure": 5
+	},
+	"charge": {
+        "units": {
+            "temperature": "degC",
+            "pressure": "bar",
+            "heat": "MW",
+            "power": "MW"
+        },
+		"massflow_min_rel": 0.25,
+		"massflow_max_rel": 1.05,
+		"_comment1": "coupled model uses relative mass flow values as boundaries",
+		"power_min_rel": 0.5,
+		"power_max_rel": 1,
+		"_comment2": "dispatch model builds on relative power values as boundaries",
+		"path": "compression",
+		"power_nominal": 50,
+		"pressure_nominal": 75,
+		"test_operational_range": false,
+        "well_mass_flow_connection": "12",
+        "powerplant_mass_flow_connection": "01",
+        "parameter_lookup": {
+            "well_mass_flow": ["Connections", "12", "m"],
+            "well_pressure": ["Connections", "12", "p"],
+            "power": ["Connections", "e01", "E"],
+            "heat": ["Components", "cooler", "Q"],
+            "well_number": ["Customs", "well_number", null],
+            "well_depth": ["Components", "well", "L"],
+			"well_dp": ["Components", "well", "dp"],
+            "well_diameter": ["Components", "well", "D"],
+            "powerplant_mass_flow": ["Connections", "01", "m"],
+            "ambient_pressure": ["Connections", "01", "p"],
+            "ambient_temperature": ["Connections", "01", "T"]
+        }
+	},
+	"discharge": {
+        "units": {
+            "temperature": "degC",
+            "pressure": "bar",
+            "heat": "MW",
+            "power": "MW"
+        },
+		"massflow_min_rel": 0.25,
+		"massflow_max_rel": 1.05,
+		"_comment1": "coupled model uses relative mass flow values as boundaries",
+		"power_min_rel": 0.5,
+		"power_max_rel": 1,
+		"_comment2": "dispatch model builds on relative power values as boundaries",
+		"path": "expansion",
+		"power_nominal": 50,
+		"pressure_nominal": 65,
+		"power_bus": "power output",
+		"heat_bus": "heat input",
+		"massflow_conn": "IF_massflow",
+		"pressure_conn": "IF_pressure",
+		"test_operational_range": true,
+        "well_mass_flow_connection": "12",
+        "powerplant_mass_flow_connection": "01",
+        "parameter_lookup": {
+            "well_mass_flow": ["Connections", "11", "m"],
+            "well_pressure": ["Connections", "11", "p"],
+            "well_temperature": ["Connections", "11", "T"],
+            "power": ["Connections", "e01", "E"],
+            "heat": ["Connections", "e01", "E"],
+            "well_number": ["Customs", "well_number", null],
+            "well_depth": ["Components", "well", "L"],
+			"well_dp": ["Components", "well", "dp"],
+            "well_diameter": ["Components", "well", "D"],
+            "powerplant_mass_flow": ["Connections", "01", "m"],
+            "ambient_pressure": ["Customs", "ambient_pressure", null],
+            "ambient_temperature": ["Customs", "ambient_temperature", null]
+        }
+	},
+	"dispatch_model": {
+		"create_input_data": true,
+		"consider_heat_discharge": false
+	}
+}
