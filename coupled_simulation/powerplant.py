@@ -83,6 +83,10 @@ class PowerPlantCoupling:
         data["path"] = os.path.join(self.wdir, data["path"])
         discharge_path = os.path.join(data["path"], "export.json")
 
+        if not os.path.exists(discharge_path):
+            self._make_charge_layout()
+            return
+
         with open(discharge_path, "r") as f:
             model_data = json.load(f)
 
@@ -142,39 +146,19 @@ class PowerPlantCoupling:
         Power plant layout calculation to determine power plant design point using
         nominal power input/output and nominal pressure as inputs.
         """
+        self._make_charge_layout()
+        self._make_discharge_layout()
+
+    def _make_charge_layout(self):
         charge_specifications = {
             "ambient_pressure": self.config["general"]["ambient pressure"],
             "ambient_temperature": self.config["general"]["ambient temperature"],
             "well_number": self.num_wells,
-            # "well_dp": 2,
-            # "well_diameter": "var",
             "well_depth": self.min_well_depth,
             "power": self.config["charge"]["power_nominal"],
             "well_pressure": self.config["charge"]["pressure_nominal"]
         }
         self.charge_model.solve_model_design_with_stepping(**charge_specifications)
-
-        discharge_specifications = {
-            "ambient_pressure": self.config["general"]["ambient pressure"],
-            "well_number": self.num_wells,
-            # "well_dp": 2,
-            # "well_diameter": "var",
-            "well_depth": self.min_well_depth,
-            "power": self.config["charge"]["power_nominal"],
-            "well_pressure": self.config["charge"]["pressure_nominal"],
-            "well_temperature": self.config["storage"]["temperature"]
-        }
-        self.discharge_model.solve_model_design_with_stepping(**discharge_specifications)
-
-        # well_diameter = max([
-        #     m.get_parameter("well_diameter")
-        #     for m in [self.charge_model, self.discharge_model]
-        # ])
-        # specifications = {
-        #     "well_dp": None,
-        #     # "well_diameter": well_diameter
-        # }
-        # self.charge_model.solve_model_design(**specifications)
         self.charge_model.save_design_state()
         self.charge_model.solve_model_offdesign()
         self.charge_model.dot_m_nominal = self.charge_model.get_parameter(
@@ -190,7 +174,17 @@ class PowerPlantCoupling:
             * self.config["charge"]["massflow_max_rel"]
         )
 
-        # self.discharge_model.solve_model_design(**specifications)
+    def _make_discharge_layout(self):
+
+        discharge_specifications = {
+            "ambient_pressure": self.config["general"]["ambient pressure"],
+            "well_number": self.num_wells,
+            "well_depth": self.min_well_depth,
+            "power": self.config["charge"]["power_nominal"],
+            "well_pressure": self.config["charge"]["pressure_nominal"],
+            "well_temperature": self.config["storage"]["temperature"]
+        }
+        self.discharge_model.solve_model_design_with_stepping(**discharge_specifications)
         self.discharge_model.save_design_state()
         self.discharge_model.solve_model_offdesign()
         self.discharge_model.dot_m_nominal = self.discharge_model.get_parameter(
@@ -371,7 +365,7 @@ class PowerPlantCoupling:
             print(msg)
             logging.error(msg)
             return 0, 0, 0
-        elif mass_flow > mass_flow_max + 1e-4:
+        elif mass_flow > mass_flow_max + 1e-3:
             msg = (
                 f"Mass flow {mass_flow} above maximum mass flow. Adjusting "
                 f"mass flow to maximum allowed mass flow of {mass_flow_max}."

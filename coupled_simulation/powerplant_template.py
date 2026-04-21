@@ -155,7 +155,7 @@ class PowerPlant(ModelTemplate):
             elif key == "powerplant_mass_flow":
                 num = int(abs(kwargs[key] - value) // abs(0.05 * self.dot_m_nominal)) + 1
             else:
-                num = 3
+                num = 4
 
             # go from target value (kwargs[key]) to old value (value) in num steps
             # without the actual old value in the linspace, then reverse order
