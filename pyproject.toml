@@ -5,5 +5,5 @@ description = "Interface for coupled simulation of power plant and geological st
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "tespy==0.9.15",
+    "tespy==0.9.15.post1",
 ]
