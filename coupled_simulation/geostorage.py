@@ -358,30 +358,27 @@ class GeoStorage:
 
             if op_mode == 'charging':
                 ecl_data_file.append("WCONINJE\n")
-                for idx in range(len(self.well_names)):
-                    line = '\'' + self.well_names[idx] + '\''
-                    line += '\t\'GAS\'\t\'OPEN\'\t\'RATE\'\t'
-                    line += str(well_target_days) + '\t'
-                    line += '1*\t' + str(self.well_upper_BHP[idx]) + '/\n'
-                    ecl_data_file.append(line)
+                for idx, wname in enumerate(self.well_names):
+                    ecl_data_file.append(
+                        f"'{wname}'\t'GAS'\t'OPEN'\t'RATE'\t"
+                        f"{well_target_days:.6f}\t1*\t{self.well_upper_BHP[idx]:.4f} /\n")
+                ecl_data_file.append('/\n')
 
             elif op_mode == 'discharging':
-                ecl_data_file.append("WCONPROD\n")
-                for idx in range(len(self.well_names)):
-                    line = '\'' + self.well_names[idx] + '\''
-                    line += '\t\'OPEN\'\t\'GRAT\'\t1*\t1*\t'
-                    line += str(well_target_days) + '\t'
-                    line += '1*\t1*\t' + str(self.well_lower_BHP[idx]) + '/\n'
-                    ecl_data_file.append(line)
+                ecl_data_file.append('WCONPROD\n')
+                for idx, wname in enumerate(self.well_names):
+                    ecl_data_file.append(
+                        f"'{wname}'\t'OPEN'\t'GRAT'\t1*\t1*\t"
+                        f"{well_target_days:.6f}\t1*\t1*\t{self.well_lower_BHP[idx]:.4f} /\n")
+                ecl_data_file.append('/\n')
 
             elif op_mode == 'shut-in' or op_mode == 'init':
-                ecl_data_file.append("WCONINJE\n")
-                for idx in range(len(self.well_names)):
-                    line = '\'' + self.well_names[idx] + '\''
-                    line += '\t\'GAS\'\t\'OPEN\'\t\'RATE\'\t'
-                    line += '0.0' + '\t'
-                    line += '1*\t' + str(self.well_upper_BHP[idx]) + '/\n'
-                    ecl_data_file.append(line)
+                ecl_data_file.append('WCONPROD\n')
+                for idx, wname in enumerate(self.well_names):
+                    ecl_data_file.append(
+                        f"'{wname}'\t'OPEN'\t'GRAT'\t1*\t1*\t"
+                        f"0.0\t1*\t1*\t{self.well_lower_BHP[idx]:.4f} /\n" )
+                ecl_data_file.append('/\n')
             else:
                 print('ERROR: operational mode not understood in timestep: ', timestep, ' is: ', op_mode)
 

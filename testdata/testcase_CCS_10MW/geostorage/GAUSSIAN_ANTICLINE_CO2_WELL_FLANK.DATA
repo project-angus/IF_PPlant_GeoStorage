@@ -1,0 +1,249 @@
+
+-- author: fgasa
+--			Initial condition: 0.115 bar/m
+-- date: 2023.01.25
+
+-- The Question: What is the optimal compressor design for a 30-year injection project where reservoir resistance constantly changes?
+-- The Discovery: A compressor sized perfectly for Year 1 (low reservoir pressure, high injectivity) might hit its surge limit or 
+-- become incredibly inefficient by Year 15 as the plume expands and boundary effects kick in. 
+-- You can map the evolving reservoir pressure curve directly against the compressor's characteristic curves to design a phased 
+-- equipment strategy (e.g., when exactly to add a booster compressor).
+
+--====================================
+RUNSPEC
+--====================================
+
+TITLE
+  Gaussian Anticline
+
+START
+  31 'DEC' 2029 /
+
+METRIC
+
+OIL
+GAS
+CO2STORE
+
+-- To activate RELA definition for HYSTERESIS options
+SATOPTS
+  HYSTER  /
+
+--	NDIVIX	NDIVIY	NDIVIZ
+DIMENS
+  80 80 50  /
+
+--	EQLNUM	DEPTH	NODES	TABLE	NODES
+EQLDIMS
+  1 /
+
+--	NTSFUN	NTPVT	NSSFUN	NPPVT	NTFIP	NRPVT	BLANK	NTEND
+TABDIMS
+  4	1	800	500	4 /
+
+REGDIMS
+  4	1*/
+
+WELLDIMS
+  10	100	2	10 /
+
+--UNIFIN
+UNIFOUTS
+/
+
+UDADIMS
+  50 50 100  /
+
+--====================================
+GRID
+--====================================
+
+INIT
+
+GRIDFILE
+  0 1 /
+
+INCLUDE
+  'include/GRID_GAUSS_80x80x50.GRDECL' /
+/
+
+PERMX 
+  320000*10  /
+PORO 
+  320000*0.2  /
+NTG 
+  320000*1  /
+ACTNUM 
+  320000*1  /
+
+-- 															Modified: 
+EQUALS
+  PERMX 10		1	80	1	80		1	6 /			-- shallow aquifer
+  PERMX 1e-4	1	80	1	80		7	26 /	-- cap rock
+  PERMX 250		1	80	1	80		27	45 /		-- storage reservoir
+  PERMX 1		1	80	1	80		46	50 /		-- underburden
+--
+  PORO 0.20	1	80	1	80		1	6 /			-- shallow aquifer
+  PORO 0.15	1	80	1	80		7	26 /		-- cap rock
+  PORO 0.22	1	80	1	80		27	45 /		-- storage reservoir
+  PORO 0.15	1	80	1	80		46	50 /		-- underburden
+/
+-- 															Modified: sotropic setup
+COPY
+  PERMX PERMY /
+  PERMX PERMZ /
+/
+
+--====================================
+EDIT
+--====================================
+
+EQUALS
+  MULTPV	1e3  1	1	1	80	1*	1* /
+  MULTPV	1e3  80	80	1	80	1*	1* /
+  MULTPV	1e3  1	80	1	1	1*	1* /
+  MULTPV	1e3  1	80	80	80	1*	1* /
+/
+
+
+
+--====================================
+PROPS
+--====================================
+
+--	Surface conditions = NTP, temperature is 20 °C (293.15 K, 68 °F) and an absolute pressure of 1.01325 bar or 1 atm (14.696 psi, 101.325 kPa)
+--STCOND
+--	20		1.01325 /
+
+-- total rock compressibility(brine+rock) = 85e-6 1/bar source: K43_report
+-- Brine compressibility is 5.6e-5 1/bar or 5.6e-7 1/kPa
+-- Rock compressibility is 3e-5 1/bar
+-- Total effective compressibility of ct -  85x10-6 /bar
+
+ROCK
+  160.6		4.5e-5 /
+
+-- unit is s [1e-3 * kg-M/kg]
+SALINITY
+  4.5 /  
+/
+
+EHYSTR
+  1*	0	1* 1*	KR  /
+/
+
+RPTPROPS
+  1 1 1 5*0 0 /
+
+INCLUDE
+  'include/RELA_SGOF_HYSTER.INC' /
+/
+
+--====================================
+REGIONS
+--====================================
+
+-- satnum #2 cap rock
+-- satnum #1 storage, drainage
+-- satnum #3 storage, imbibition
+
+PVTNUM
+  320000*1 /
+EQLNUM
+  320000*1 /
+EQUALS
+  SATNUM 1	1	80	1	80		1	6 /			-- shallow aquifer
+  SATNUM 3	1	80	1	80		7	26 /		-- cap rock
+  SATNUM 1	1	80	1	80		27	45 /		-- storage reservoir
+  SATNUM 4	1	80	1	80		46	50 /		-- underburden
+--
+  IMBNUM 2	1	80	1	80		1	6 /			-- shallow aquifer
+  IMBNUM 3	1	80	1	80		7	26 /		-- cap rock
+  IMBNUM 2	1	80	1	80		27	45 /		-- storage reservoir, imbibition
+  IMBNUM 4	1	80	1	80		46	50 /		-- underburden
+--
+  FIPNUM 1	1	80	1	80		1	6 /	
+  FIPNUM 2	1	80	1	80		7	26 /
+  FIPNUM 3	1	80	1	80		27	45 /
+  FIPNUM 4	1	80	1	80		46	50 /
+/
+--====================================
+SOLUTION
+--====================================
+
+EQUIL
+  1400 160.6 1400 1* 0 0 1 1 0 /
+
+
+RTEMPVD
+  1400	52
+  2000	52 /
+RSVD
+  1400	0.0
+  2000	0.0 /
+/
+
+--====================================	
+SUMMARY
+--====================================
+
+RUNSUM
+DATE
+WBHP
+/
+WGIR
+/
+WGPR
+/
+-- FWIPL
+-- RWIPL
+-- /
+-- FWIPG 
+-- RWIPG
+-- /
+-- 
+-- FGCDM
+-- RGCDM 
+-- /
+-- 
+-- FGCDI 
+-- RGCDI 
+-- /
+-- 
+-- FWCD
+-- RWCD
+-- /
+
+
+--====================================
+SCHEDULE
+--====================================
+
+
+--MESSAGES
+--  2*	5	100	4*	1000	100  /
+
+RPTRST
+  'BASIC=2' ALLPROPS /
+
+GRUPTREE
+  'NORTH' FIELD /
+  'SOUTH' FIELD /
+/
+
+
+WELSPECS
+'Well'	'NORTH'	30	40	1*	'GAS'	5*	SEG /
+/
+
+COMPDAT
+'Well'	1* 1*	27	45	'OPEN'	1*	1*		0.178  /
+/
+
+WCONPROD
+  'Well'	OPEN	ORAT 	0/
+/
+TSTEP
+1*0.041666666666666664 /
+
+END

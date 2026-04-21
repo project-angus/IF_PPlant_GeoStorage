@@ -1,0 +1,19 @@
+{
+	"input_timeseries_path": "input.csv",
+	"output_timeseries_path": "output.csv",
+	"geostorage_path": "geostorage",
+	"powerplant_path": "powerplant",
+	"t_start": "2030-01-01 00:00:00",
+	"t_steps_total": 8760, 
+	"t_step_length": 3600,
+	"min_iter": 0,
+	"max_iter": 1,
+	"save_nth_t_step": 1, 
+	"pressure_diff_rel": 0.1,
+	"pressure_diff_abs": 0.1,
+	"flow_diff_rel": 0.1,
+	"flow_diff_abs": 0.1,
+	"debug": "True",
+	"pressure_change_restart": 6.0,
+	"eval_output": "True"
+}
