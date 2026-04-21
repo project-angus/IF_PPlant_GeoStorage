@@ -113,7 +113,7 @@ class ModelTemplate():
             # in this case model is very likely corrupted!!
             # fix it by running a presolve using the stable solution
             self._solved = False
-            self.nw.solve("design", init_only=True, design_path=self._design_path, init_path=self._stable_solution)
+            self.nw.solve("offdesign", init_only=True, design_path=self._design_path, init_path=self._stable_solution)
 
 
 class PowerPlant(ModelTemplate):
