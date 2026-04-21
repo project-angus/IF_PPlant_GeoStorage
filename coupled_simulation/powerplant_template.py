@@ -112,8 +112,14 @@ class ModelTemplate():
         elif self.nw.status in [1, 2, 3, 99]:
             # in this case model is very likely corrupted!!
             # fix it by running a presolve using the stable solution
-            self._solved = False
-            self.nw.solve("offdesign", init_only=True, design_path=self._design_path, init_path=self._stable_solution)
+            # however, it seems sometimes we do get a good solution which
+            # is not accepted although it should
+            if self.nw.residual_history[-1] < 1e-3:
+                self.nw._postprocess()
+                self._solved = True
+            else:
+                self._solved = False
+                self.nw.solve("offdesign", init_only=True, design_path=self._design_path, init_path=self._stable_solution)
 
 
 class PowerPlant(ModelTemplate):
@@ -155,7 +161,7 @@ class PowerPlant(ModelTemplate):
             elif key == "powerplant_mass_flow":
                 num = int(abs(kwargs[key] - value) // abs(0.05 * self.dot_m_nominal)) + 1
             else:
-                num = 4
+                num = 3
 
             # go from target value (kwargs[key]) to old value (value) in num steps
             # without the actual old value in the linspace, then reverse order
